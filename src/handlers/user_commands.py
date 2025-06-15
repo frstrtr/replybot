@@ -1,3 +1,4 @@
+"""This module handles user commands for a Telegram bot using aiogram."""
 from aiogram import types, Router, Dispatcher, Bot
 from aiogram.filters import CommandStart, Command, CommandObject
 import logging
@@ -9,7 +10,7 @@ router = Router()
 async def start_command_deeplink(message: types.Message, command: CommandObject, bot: Bot):
     """Handles /start command, potentially with a deep link."""
     args = command.args
-    logging.info(f"Received /start command with args: {args} from user {message.from_user.id}")
+    logging.info(f"Received /start command with args: {args} from user {message.from_user.id}") # pylint: disable=logging-fstring-interpolation
 
     if args and args.startswith("bizChat"):
         try:
@@ -24,7 +25,7 @@ async def start_command_deeplink(message: types.Message, command: CommandObject,
             # This message.chat.id is the chat between the bot and the business user.
             # The business_user_chat_id is the ID of the chat the business user was managing.
             logging.info(f"Business user {message.from_user.id} (chatting in {message.chat.id}) "
-                         f"was managing bizChatID: {business_user_chat_id}")
+                         f"was managing bizChatID: {business_user_chat_id}") # pylint: disable=logging-fstring-interpolation
 
         except ValueError:
             await message.answer("Welcome to the Business Bot! Invalid deep link format.")
