@@ -2,15 +2,67 @@
 
 import logging
 from aiogram import Router, F, Bot, Dispatcher
-from aiogram.types import Message, BusinessConnection, BusinessMessagesDeleted, User
+from aiogram.types import (
+    Message,
+    BusinessConnection,
+    BusinessMessagesDeleted,
+    User,
+    BusinessBotRights,
+)
+
+# Import the configuration module
+import config as app_config
 
 business_router = Router()
 
-# IMPORTANT: For a production bot, `active_business_connections` MUST be stored persistently
-# (e.g., in a database like PostgreSQL with asyncpg, or a Redis cache).
-# The current in-memory dictionary will lose all connection data if the bot restarts,
-# potentially disrupting service until new BusinessConnection updates are received.
-active_business_connections = {}  # Simple in-memory store for demo
+# Dictionary to store active business connections
+# Key: business_connection_id (str)
+# Value: dict containing "user_chat_id", "rights" (BusinessBotRights), and "user" (User)
+active_business_connections: dict = {}
+
+# --- Hardcoded Business Connection Details (Loaded from Config) ---
+# These are used if the bot is intended for a single, known business account
+# and persistent storage for connections isn't fully implemented.
+
+# Define default rights for the hardcoded connection
+# Adjust these if you know the specific rights for your connection.
+hardcoded_rights = BusinessBotRights(
+    can_reply=True,
+    can_read_messages=True,
+    # Set other rights as needed, defaulting to None or False if unsure
+    can_delete_outgoing_messages=False,
+    can_delete_all_messages=False,
+    can_edit_name=False,
+    can_edit_bio=False,
+    can_edit_profile_photo=False,
+    can_edit_username=False,
+    can_change_gift_settings=False,
+    can_view_gifts_and_stars=False,
+    can_convert_gifts_to_stars=False,
+    can_manage_stories=False,
+)
+
+# Pre-populate active_business_connections if config values are set
+if app_config.HC_BUSINESS_CONNECTION_ID and app_config.HC_BUSINESS_OWNER_CHAT_ID:
+    active_business_connections[app_config.HC_BUSINESS_CONNECTION_ID] = {
+        "user_chat_id": app_config.HC_BUSINESS_OWNER_CHAT_ID,
+        "rights": hardcoded_rights,  # Using the predefined rights object
+        "user": User(
+            id=app_config.HC_BUSINESS_OWNER_CHAT_ID,
+            is_bot=False,
+            first_name="Business Owner (from config)",
+        ),  # Dummy User
+    }
+    logging.info(
+        f"Initialized with business connection from config: "
+        f"ID='{app_config.HC_BUSINESS_CONNECTION_ID}', OwnerChatID='{app_config.HC_BUSINESS_OWNER_CHAT_ID}'"
+    )
+else:
+    logging.warning(
+        "HC_BUSINESS_CONNECTION_ID or HC_BUSINESS_OWNER_CHAT_ID not found in config. "
+        "Bot will rely solely on dynamic BusinessConnection updates."
+    )
+# --- End of Config-based Initialization ---
 
 
 @business_router.business_connection()
@@ -18,18 +70,18 @@ async def handle_business_connection(business_connection: BusinessConnection, bo
     """
     Handles BusinessConnection updates.
     A user has established, edited, or ended a Business Connection with the bot.
+    This will override hardcoded data if a new connection event for the same ID occurs.
     """
     connection_id = business_connection.id
     user_chat_id = business_connection.user_chat_id
     is_enabled = business_connection.is_enabled
-    rights = business_connection.rights  # Use the rights object
+    rights = business_connection.rights
 
     logging.info(
-        f"BusinessConnection Update: ID={connection_id}, UserChatID={user_chat_id}, "
+        f"BusinessConnection Update Received: ID={connection_id}, UserChatID={user_chat_id}, "
         f"IsEnabled={is_enabled}, BotID={bot.id}"
     )
     if rights:
-        # Log all available rights from the BusinessBotRights object
         rights_summary = ", ".join(
             f"{right_name}={getattr(rights, right_name)}"
             for right_name in [
@@ -50,30 +102,34 @@ async def handle_business_connection(business_connection: BusinessConnection, bo
             ]
             if hasattr(rights, right_name) and getattr(rights, right_name) is not None
         )
-        logging.info(f"Business Rights for {connection_id}: {rights_summary}")
+        logging.info(f"Business Rights for {connection_id} from API: {rights_summary}")
 
     if is_enabled and rights:
         active_business_connections[connection_id] = {
             "user_chat_id": user_chat_id,
-            "rights": rights,  # Store the whole rights object
-            "user": business_connection.user,  # Store user info if needed
+            "rights": rights,  # Use rights from the API event
+            "user": business_connection.user,
         }
+        logging.info(
+            f"Updated/Set active_business_connections for {connection_id} from API event."
+        )
         await bot.send_message(
-            chat_id=user_chat_id,  # Send to the user who connected the bot
-            text=f"Thank you for connecting your business account! Connection ID: {connection_id}.\n"
-            f"I can reply on your behalf: {rights.can_reply}.\n"
-            f"I can read messages: {rights.can_read_messages}.",
+            chat_id=user_chat_id,
+            text=f"Business connection (ID: {connection_id}) is now active. Rights updated from API.",
         )
     elif not is_enabled:
         if connection_id in active_business_connections:
             del active_business_connections[connection_id]
+            logging.info(
+                f"Removed business connection {connection_id} from active store due to API event (is_enabled=False)."
+            )
         await bot.send_message(
             chat_id=user_chat_id,
-            text=f"Your business connection (ID: {connection_id}) has been disabled or removed.",
+            text=f"Your business connection (ID: {connection_id}) has been disabled or removed via API event.",
         )
     else:
         logging.warning(
-            f"Business connection {connection_id} status: is_enabled={is_enabled}, but rights are missing."
+            f"Business connection {connection_id} update: is_enabled={is_enabled}, but rights are missing. Not updating store."
         )
 
 
@@ -84,7 +140,6 @@ async def handle_business_message(message: Message, bot: Bot):
     These are messages from clients to the business account.
     """
     logging.info(f"--- handle_business_message TRIGGERED ---")
-    # Log the entire incoming message object for detailed inspection
     logging.debug(
         f"Incoming Business Message Object: {message.model_dump_json(indent=2)}"
     )
@@ -113,11 +168,10 @@ async def handle_business_message(message: Message, bot: Bot):
 
     if not connection_details:
         logging.warning(
-            f"No active business connection found in local store for ID: '{business_connection_id}'. "
-            f"Bot may have restarted or connection was not properly established/logged."
+            f"No business connection found in store for ID: '{business_connection_id}'."
         )
-        # Optionally, you could try to inform the business owner if you had a way to get their user_chat_id
-        # without relying on active_business_connections, but that's tricky.
+        # If HC_BUSINESS_CONNECTION_ID was set but doesn't match, this log is important.
+        # If it wasn't set, this is expected until a BusinessConnection update.
         return
 
     logging.debug(
@@ -136,10 +190,7 @@ async def handle_business_message(message: Message, bot: Bot):
     )
 
     if current_rights.can_reply:
-        # Your response logic. For now, let's use a simple echo.
-        # You can replace this with more complex logic (keyword matching, AI, etc.)
-        response_text = f"Business Echo: {message.text}"
-
+        response_text = f"Business Echo (Active via Config/API): {message.text}"
         try:
             await bot.send_message(
                 chat_id=client_chat_id,  # Send to the client's chat with the business
@@ -177,7 +228,9 @@ async def handle_business_message(message: Message, bot: Bot):
                 )
 
 
-@business_router.edited_message(F.business_message)  # Handle edited business messages
+@business_router.edited_business_message(
+    F.business_message
+)  # Handle edited business messages
 async def handle_edited_business_message(message: Message, bot: Bot):
     business_connection_id = message.business_connection_id
     client_chat_id = message.chat.id
