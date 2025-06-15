@@ -1,23 +1,28 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-def create_main_menu():
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    button1 = KeyboardButton("Start")
-    button2 = KeyboardButton("Help")
-    keyboard.add(button1, button2)
+def create_main_menu() -> ReplyKeyboardMarkup:
+    """Creates the main menu keyboard."""
+    buttons = [
+        [KeyboardButton(text="Start"), KeyboardButton(text="Help")]
+    ]
+    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
     return keyboard
 
-def create_business_menu():
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    button1 = KeyboardButton("Business Feature 1")
-    button2 = KeyboardButton("Business Feature 2")
-    keyboard.add(button1, button2)
+def create_business_menu() -> ReplyKeyboardMarkup:
+    """Creates the business menu keyboard."""
+    buttons = [
+        [KeyboardButton(text="Business Feature 1")],
+        [KeyboardButton(text="Business Feature 2")]
+    ]
+    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
     return keyboard
 
-def create_cancel_button():
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    button = KeyboardButton("Cancel")
-    keyboard.add(button)
+def create_cancel_button() -> ReplyKeyboardMarkup:
+    """Creates a cancel button keyboard."""
+    buttons = [
+        [KeyboardButton(text="Cancel")]
+    ]
+    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
     return keyboard
 
 def get_business_menu_keyboard() -> ReplyKeyboardMarkup:

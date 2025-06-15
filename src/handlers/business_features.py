@@ -5,8 +5,8 @@ from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-from config import BUSINESS_CONTACT_EMAIL, BUSINESS_HOURS
-from keyboards.reply_keyboards import get_business_menu_keyboard
+from src.config import BUSINESS_CONTACT_EMAIL, BUSINESS_HOURS
+from src.keyboards.reply_keyboards import get_business_menu_keyboard
 
 router = Router()
 
@@ -26,14 +26,14 @@ async def business_hours(message: Message):
     """Handler for business hours button"""
     await message.answer(f"Our business hours are: {BUSINESS_HOURS}")
 
-async def business_contact(message: Message):
+async def business_contact(message: Message, state: FSMContext):
     """Handler for contact button"""
     await message.answer(
         f"You can reach us at: {BUSINESS_CONTACT_EMAIL}\n"
         f"Or leave your contact info and we'll get back to you.",
     )
     await message.answer("Please enter your contact information:")
-    await BusinessDialog.waiting_for_contact.set()
+    await state.set_state(BusinessDialog.waiting_for_contact)
 
 async def process_contact_info(message: Message, state: FSMContext):
     """Process contact information from user"""
@@ -50,7 +50,7 @@ async def process_contact_info(message: Message, state: FSMContext):
 async def business_message(message: Message, state: FSMContext):
     """Handler for starting a business message"""
     await message.answer("Please enter your message to our business:")
-    await BusinessDialog.waiting_for_message.set()
+    await state.set_state(BusinessDialog.waiting_for_message)
 
 async def process_business_message(message: Message, state: FSMContext):
     """Process business message from user"""

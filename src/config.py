@@ -8,7 +8,7 @@ if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN is not set in .env file")
 
 # Business bot settings
-BUSINESS_CONTACT_EMAIL = os.getenv("BUSINESS_CONTACT_EMAIL", "contact@example.com")
+BUSINESS_CONTACT_EMAIL = os.getenv("BUSINESS_CONTACT_EMAIL", "coming@soon")
 BUSINESS_HOURS = os.getenv("BUSINESS_HOURS", "9:00-18:00 Mon-Fri")
 BUSINESS_DESCRIPTION = os.getenv("BUSINESS_DESCRIPTION", "Your business description here")
 
