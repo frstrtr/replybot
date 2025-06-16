@@ -1,5 +1,5 @@
 aiohttp>=3.8.1
-aiogram>=3.0.0
+aiogram>=3.20
 python-dotenv>=0.20.0
 sqlalchemy>=1.4.27
 asyncpg>=0.24.0
