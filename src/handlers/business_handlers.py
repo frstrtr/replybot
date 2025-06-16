@@ -191,7 +191,7 @@ async def handle_business_message(message: Message, bot: Bot):
         f"Rights for connection '{business_connection_id}': can_reply={current_rights.can_reply}"
     )
 
-    if current_rights.can_reply and client_user.full_name != "Алина Океан":
+    if current_rights.can_reply and client_user.full_name != app_config.AUTHORIZED_FULL_NAME:
         response_text = f"Business Echo (Active via Config/API): {message.text}"
         try:
             await bot.send_message(

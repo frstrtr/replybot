@@ -38,10 +38,15 @@ if HC_BUSINESS_OWNER_CHAT_ID_STR:
     except ValueError:
         print(f"Warning: HC_BUSINESS_OWNER_CHAT_ID ('{HC_BUSINESS_OWNER_CHAT_ID_STR}') is not a valid integer. Will be None.")
 
-# You could also add a check here to ensure these are set if your logic strictly depends on them
-# if not HC_BUSINESS_CONNECTION_ID or not HC_BUSINESS_OWNER_CHAT_ID:
-#     print("Warning: HC_BUSINESS_CONNECTION_ID or HC_BUSINESS_OWNER_CHAT_ID is not set in .env. "
-#           "Hardcoded fallback for business connection might not work.")
+
+# --- Security / Authorization ---
+# Load the specific full name to authorize.
+# If not set, the auth middleware might behave differently (e.g., allow all or use other checks).
+AUTHORIZED_FULL_NAME = os.getenv("AUTHORIZED_FULL_NAME")
+if AUTHORIZED_FULL_NAME:
+    print(f"INFO: Configured to authorize full name: '{AUTHORIZED_FULL_NAME}'")
+else:
+    print("INFO: AUTHORIZED_FULL_NAME is not set in .env. Full name specific auth check will be skipped or permissive.")
 
 
 class Config:
