@@ -1,0 +1,10 @@
+# filepath: /home/user0/replybot/.pylintrc
+[MESSAGES CONTROL]
+# Disable lazy logging checks if you prefer direct f-string usage
+# W1203 is for logging-fstring-interpolation (using f-string in logging function call)
+# W1202 is for logging-format-interpolation (using % formatting in logging function call)
+# Add the specific ID(s) you want to disable.
+# If you're primarily using f-strings and want to disable the warning for that:
+disable=logging-fstring-interpolation
+        # You can add more comma-separated message IDs here if needed, e.g.,
+        # logging-format-interpolation, C0114, C0116

@@ -7,6 +7,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+from aiogram.exceptions import TelegramAPIError
 # from aiogram.types import (
 #     BusinessIntro,
 #     BusinessLocation,
@@ -24,35 +25,33 @@ from middlewares.auth_middleware import AuthMiddleware
 # Note: Using logging.getLogger() without a name gets the root logger.
 # Using logging.getLogger(__name__) creates/gets a logger specific to this module.
 # For initial setup, configuring the root logger is often best.
-log_format = (
-    "%(asctime)s - %(levelname)s - %(name)s - %(module)s:%(lineno)d - %(message)s"
-)
-# logging.basicConfig(level=logging.INFO, format=log_format, stream=sys.stdout, force=True)
+
+# Updated log_format to include %(filename)s
+log_format = "%(asctime)s - %(levelname)s - %(name)s - %(filename)s:%(lineno)d - %(message)s"
 
 # More explicit setup:
-root_logger = logging.getLogger()  # Get the root logger
+root_logger = logging.getLogger() # Get the root logger
 
 # Clear any existing handlers from the root logger
 if root_logger.hasHandlers():
     root_logger.handlers.clear()
-    # print("Cleared existing root logger handlers.", file=sys.stderr) # For debugging the setup itself
 
 # Set the desired level on the root logger
 root_logger.setLevel(logging.INFO)
 
 # Create a stream handler to output to stdout (or stderr)
-stream_handler = logging.StreamHandler(sys.stdout)  # Change to sys.stderr if preferred
-stream_handler.setLevel(logging.INFO)  # Set level on handler as well
+stream_handler = logging.StreamHandler(sys.stdout) # Change to sys.stderr if preferred
+stream_handler.setLevel(logging.INFO) # Set level on handler as well
 
 # Create a formatter
-formatter = logging.Formatter(log_format)
+formatter = logging.Formatter(log_format) # The formatter uses the updated log_format
 stream_handler.setFormatter(formatter)
 
 # Add the handler to the root logger
 root_logger.addHandler(stream_handler)
 
 # Now, get your module-specific logger. It will inherit from the root logger's setup.
-logger = logging.getLogger(__name__)  # __name__ will be 'src.main' or '__main__'
+logger = logging.getLogger(__name__) # __name__ will be 'src.main' or '__main__'
 
 # Test log immediately after setup
 logger.info("Logging explicitly configured in main.py. Application starting...")
@@ -164,11 +163,10 @@ async def setup_business_info(bot: Bot):
         #     # Note: You'll need to construct BusinessOpeningHoursInterval objects for the list above.
         #     # For simplicity, this example assumes app_config.BUSINESS_OPENING_HOURS_INTERVALS is already correctly formatted.
         #     # A more robust implementation would involve creating these objects from your config data.
-        #     await bot.set_my_business_opening_hours(opening_hours=opening_hours)
         #     logging.info("Business opening hours set.")
 
         logging.info("Business information setup process completed.")
-    except Exception as e:
+    except TelegramAPIError as e:
         logging.error(f"Failed to set up some business information: {e}", exc_info=True)
 
 

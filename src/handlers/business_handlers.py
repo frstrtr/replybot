@@ -9,6 +9,7 @@ from aiogram.types import (
     User,
     BusinessBotRights,
 )
+from aiogram.exceptions import TelegramAPIError
 
 # Import the configuration module
 import config as app_config
@@ -133,13 +134,13 @@ async def handle_business_connection(business_connection: BusinessConnection, bo
         )
 
 
-@business_router.business_message()  # This filter is correct for business messages
+@business_router.business_message()
 async def handle_business_message(message: Message, bot: Bot):
     """
     Handles incoming messages via a Business Connection.
     These are messages from clients to the business account.
     """
-    logging.info(f"--- handle_business_message TRIGGERED ---")
+    logging.info("--- handle_business_message TRIGGERED ---")
     logging.debug(
         f"Incoming Business Message Object: {message.model_dump_json(indent=2)}"
     )
@@ -157,8 +158,9 @@ async def handle_business_message(message: Message, bot: Bot):
         return
 
     logging.info(
-        f"Processing Business Message: ConnectionID='{business_connection_id}', ClientChatID='{client_chat_id}', "
-        f"ClientUser='{client_user.full_name if client_user else 'Unknown Client'}', Text='{message.text}'"
+        f"\nProcessing Business Message:\n"
+        f"Business ConnectionID='{business_connection_id}', ClientChatID='{client_chat_id}', "
+        f"ClientUser='{client_user.full_name if client_user else 'Unknown Client'}', Text:\n'{message.text}', "
     )
 
     logging.debug(
@@ -189,7 +191,7 @@ async def handle_business_message(message: Message, bot: Bot):
         f"Rights for connection '{business_connection_id}': can_reply={current_rights.can_reply}"
     )
 
-    if current_rights.can_reply:
+    if current_rights.can_reply and client_user.full_name != "Алина Океан":
         response_text = f"Business Echo (Active via Config/API): {message.text}"
         try:
             await bot.send_message(
@@ -200,7 +202,7 @@ async def handle_business_message(message: Message, bot: Bot):
             logging.info(
                 f"SUCCESS: Replied to client in chat {client_chat_id} via business connection {business_connection_id}. Text: '{response_text}'"
             )
-        except Exception as e:
+        except TelegramAPIError as e:
             logging.error(
                 f"ERROR: Failed to send message via business connection {business_connection_id} to chat {client_chat_id}: {e}",
                 exc_info=True,
@@ -216,12 +218,12 @@ async def handle_business_message(message: Message, bot: Bot):
                 await bot.send_message(
                     chat_id=business_owner_chat_id,  # Notify the business owner directly
                     text=f"FYI: Received a message from {client_name} in chat {client_chat_id} (with your business): '{message.text}'. "
-                    f"I cannot reply directly as 'can_reply' right is currently False for this connection.",
+                    "I cannot reply directly as 'can_reply' right is currently False for this connection.",
                 )
                 logging.info(
                     f"Notified business owner ({business_owner_chat_id}) about unanswerable message from client."
                 )
-            except Exception as e:
+            except TelegramAPIError as e:
                 logging.error(
                     f"ERROR: Failed to notify business owner {business_owner_chat_id}: {e}",
                     exc_info=True,
@@ -239,6 +241,11 @@ async def handle_edited_business_message(message: Message, bot: Bot):
         f"New Text='{message.text}'"
     )
     # Add logic to process edited messages if needed, similar to handle_business_message
+    await bot.send_message(
+        chat_id=client_chat_id,
+        text=f"Your message was edited: {message.text}",
+        business_connection_id=business_connection_id,  # Ensure this is sent on behalf of the business
+    )
 
 
 @business_router.deleted_business_messages()
