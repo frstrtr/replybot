@@ -8,11 +8,16 @@ from aiogram.types import (
     BusinessMessagesDeleted,
     User,
     BusinessBotRights,
+    CallbackQuery,
 )
 from aiogram.exceptions import TelegramAPIError
+import html
 
 # Import the configuration module
 import config as app_config
+
+# from keyboards.reply_keyboards import get_tourism_main_keyboard
+from keyboards.inline_keyboards import get_tourism_main_inline_keyboard
 
 business_router = Router()
 
@@ -191,49 +196,112 @@ async def handle_business_message(message: Message, bot: Bot):
         f"Rights for connection '{business_connection_id}': can_reply={current_rights.can_reply}"
     )
 
-    if current_rights.can_reply and client_user.full_name != app_config.AUTHORIZED_FULL_NAME:
-        response_text = f"Business Echo (Active via Config/API): {message.text}"
+    if (
+        current_rights.can_reply
+        and client_user.full_name != app_config.AUTHORIZED_FULL_NAME
+    ):
+        response_text = (
+            "Пожалуйста, выберите нужный вопрос ниже или задайте свой вопрос."
+        )
         try:
             await bot.send_message(
-                chat_id=client_chat_id,  # Send to the client's chat with the business
+                chat_id=client_chat_id,
                 text=response_text,
-                business_connection_id=business_connection_id,  # Crucial for sending on behalf of the business
+                business_connection_id=business_connection_id,
+                reply_markup=get_tourism_main_inline_keyboard(),
+            )
+            logging.info(f"Sent tourism main menu to client in chat {client_chat_id}.")
+        except TelegramAPIError as e:
+            logging.error(f"Failed to send menu: {e}", exc_info=True)
+
+        business_owner_chat_id = connection_details.get("user_chat_id")
+        client_name = client_user.full_name if client_user else "A client"
+        # Escape HTML special characters in the name
+        safe_name = html.escape(client_name)
+        client_link = ""
+        android_link = ""
+        apple_link = ""
+        if client_user:
+            client_link = f'tg://user?id={client_user.id}'
+            android_link = f'tg://openmessage?user_id={client_user.id}'
+            apple_link = f'https://t.me/@id{client_user.id}'
+            client_name_html = f"<a href='{client_link}'>{safe_name}</a>"
+        else:
+            client_name_html = safe_name
+
+        try:
+            await bot.send_message(
+                chat_id=business_owner_chat_id,
+                text=(
+                    f"FYI: Received a message from {client_name_html} in chat {client_chat_id} (with your business): "
+                    f"'{html.escape(message.text)}'.\n"
+                    f"I can reply directly as 'can_reply' right is currently True for this connection.\n"
+                    f"{client_link}\n"
+                    f"{android_link}\n"
+                    f"{apple_link}"
+                ),
+                parse_mode="HTML",
+                disable_web_page_preview=True,
             )
             logging.info(
-                f"SUCCESS: Replied to client in chat {client_chat_id} via business connection {business_connection_id}. Text: '{response_text}'"
+                f"Notified business owner ({business_owner_chat_id}) about message from client."
             )
         except TelegramAPIError as e:
             logging.error(
-                f"ERROR: Failed to send message via business connection {business_connection_id} to chat {client_chat_id}: {e}",
+                f"ERROR: Failed to notify business owner {business_owner_chat_id}: {e}",
                 exc_info=True,
             )
+
     else:
         logging.info(
             f"Bot cannot reply for business connection '{business_connection_id}' as 'can_reply' is False."
         )
         business_owner_chat_id = connection_details.get("user_chat_id")
-        if business_owner_chat_id:
-            client_name = client_user.full_name if client_user else "A client"
-            try:
-                await bot.send_message(
-                    chat_id=business_owner_chat_id,  # Notify the business owner directly
-                    text=f"FYI: Received a message from {client_name} in chat {client_chat_id} (with your business): '{message.text}'. "
-                    "I cannot reply directly as 'can_reply' right is currently False for this connection.",
-                )
-                logging.info(
-                    f"Notified business owner ({business_owner_chat_id}) about unanswerable message from client."
-                )
-            except TelegramAPIError as e:
-                logging.error(
-                    f"ERROR: Failed to notify business owner {business_owner_chat_id}: {e}",
-                    exc_info=True,
-                )
+        client_name = client_user.full_name if client_user else "A client"
+        # Escape HTML special characters in the name
+        safe_name = html.escape(client_name)
+        client_link = ""
+        android_link = ""
+        apple_link = ""
+        if client_user:
+            client_link = f'tg://user?id={client_user.id}'
+            android_link = f'tg://openmessage?user_id={client_user.id}'
+            apple_link = f'https://t.me/@id{client_user.id}'
+            client_name_html = f"<a href='{client_link}'>{safe_name}</a>"
+        else:
+            client_name_html = safe_name
+
+        try:
+            await bot.send_message(
+                chat_id=business_owner_chat_id,
+                text=(
+                    f"FYI: Received a message from {client_name_html} in chat {client_chat_id} (with your business): "
+                    f"'{html.escape(message.text)}'.\n"
+                    f"I cannot reply directly as 'can_reply' right is currently False for this connection.\n"
+                    f"{client_link}\n"
+                    f"{android_link}\n"
+                    f"{apple_link}"
+                ),
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
+            logging.info(
+                f"Notified business owner ({business_owner_chat_id}) about unanswerable message from client."
+            )
+        except TelegramAPIError as e:
+            logging.error(
+                f"ERROR: Failed to notify business owner {business_owner_chat_id}: {e}",
+                exc_info=True,
+            )
 
 
 @business_router.edited_business_message(
     F.business_message
 )  # Handle edited business messages
 async def handle_edited_business_message(message: Message, bot: Bot):
+    """Handles edited messages in a Business Connection.
+    This is triggered when a client edits their message in the business chat.
+    """
     business_connection_id = message.business_connection_id
     client_chat_id = message.chat.id
     logging.info(
@@ -266,6 +334,21 @@ async def handle_deleted_business_messages(event: BusinessMessagesDeleted, bot: 
                 chat_id=business_owner_chat_id,
                 text=f"{len(event.message_ids)} message(s) were deleted in your managed chat {event.chat.id}.",
             )
+
+
+@business_router.callback_query()
+async def handle_tourism_menu_callback(callback: CallbackQuery):
+    data = callback.data
+    if data == "faq":
+        await callback.message.edit_text("Вот часто задаваемые вопросы...")
+    elif data == "prices":
+        await callback.message.edit_text("Вот наши цены...")
+    elif data == "contacts":
+        await callback.message.edit_text("Наши контакты: ...")
+    elif data == "excursions":
+        await callback.message.edit_text("Вот наши экскурсии...")
+    else:
+        await callback.answer("Unknown option.")
 
 
 def register_business_handlers(

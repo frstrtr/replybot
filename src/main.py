@@ -8,25 +8,11 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.exceptions import TelegramAPIError
-# from aiogram.types import (
-#     BusinessIntro,
-#     BusinessLocation,
-#     BusinessOpeningHours,
-#     InputSticker,
-# )
 
 import config as app_config  # Use an alias to avoid potential conflicts and clarify origin
 from handlers import register_all_handlers
 from middlewares.auth_middleware import AuthMiddleware
 
-
-# --- Robust Logging Setup ---
-# Get the root logger
-# Note: Using logging.getLogger() without a name gets the root logger.
-# Using logging.getLogger(__name__) creates/gets a logger specific to this module.
-# For initial setup, configuring the root logger is often best.
-
-# Updated log_format to include %(filename)s
 log_format = "%(asctime)s - %(levelname)s - %(name)s - %(filename)s:%(lineno)d - %(message)s"
 
 # More explicit setup:

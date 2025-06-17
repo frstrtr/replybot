@@ -35,3 +35,15 @@ def get_business_menu_keyboard() -> ReplyKeyboardMarkup:
         [KeyboardButton(text="Send Business Message")],
     ]
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+
+
+def get_tourism_main_keyboard():
+    """Create keyboard for tourism main menu"""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="FAQ"), KeyboardButton(text="Prices")],
+            [KeyboardButton(text="Contacts"), KeyboardButton(text="Excursions")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=False,
+    )
