@@ -200,9 +200,7 @@ async def handle_business_message(message: Message, bot: Bot):
         current_rights.can_reply
         and client_user.full_name != app_config.AUTHORIZED_FULL_NAME
     ):
-        response_text = (
-            "Пожалуйста, выберите нужный вопрос ниже или задайте свой вопрос."
-        )
+        response_text = "Пожалуйста, выберите нужный вопрос ниже или задайте свой."
         try:
             await bot.send_message(
                 chat_id=client_chat_id,
@@ -222,9 +220,9 @@ async def handle_business_message(message: Message, bot: Bot):
         android_link = ""
         apple_link = ""
         if client_user:
-            client_link = f'tg://user?id={client_user.id}'
-            android_link = f'tg://openmessage?user_id={client_user.id}'
-            apple_link = f'https://t.me/@id{client_user.id}'
+            client_link = f"tg://user?id={client_user.id}"
+            android_link = f"tg://openmessage?user_id={client_user.id}"
+            apple_link = f"https://t.me/@id{client_user.id}"
             client_name_html = f"<a href='{client_link}'>{safe_name}</a>"
         else:
             client_name_html = safe_name
@@ -252,7 +250,10 @@ async def handle_business_message(message: Message, bot: Bot):
                 exc_info=True,
             )
 
-    else:
+    elif (
+        current_rights.can_reply is False
+        and client_user.full_name != app_config.AUTHORIZED_FULL_NAME
+    ):
         logging.info(
             f"Bot cannot reply for business connection '{business_connection_id}' as 'can_reply' is False."
         )
@@ -264,9 +265,9 @@ async def handle_business_message(message: Message, bot: Bot):
         android_link = ""
         apple_link = ""
         if client_user:
-            client_link = f'tg://user?id={client_user.id}'
-            android_link = f'tg://openmessage?user_id={client_user.id}'
-            apple_link = f'https://t.me/@id{client_user.id}'
+            client_link = f"tg://user?id={client_user.id}"
+            android_link = f"tg://openmessage?user_id={client_user.id}"
+            apple_link = f"https://t.me/@id{client_user.id}"
             client_name_html = f"<a href='{client_link}'>{safe_name}</a>"
         else:
             client_name_html = safe_name
@@ -347,6 +348,36 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
         await callback.message.edit_text("Наши контакты: ...")
     elif data == "excursions":
         await callback.message.edit_text("Вот наши экскурсии...")
+    elif data == "boats":
+        await callback.message.edit_text("Вот информация о лодках...")
+    elif data == "fishing":
+        await callback.message.edit_text("Вот информация о рыбалке...")
+    elif data == "surfing":
+        await callback.message.edit_text("Вот информация о серфинге...")
+    elif data == "windsurfing_kitesurfing":
+        await callback.message.edit_text(
+            "Вот информация о виндсерфинге и кайтсерфинге..."
+        )
+    elif data == "reviews":
+        await callback.message.edit_text("Вот отзывы наших клиентов...")
+    elif data == "about":
+        await callback.message.edit_text("Вот информация о нас...")
+    elif data == "support":
+        await callback.message.edit_text("Вот как связаться с нашей поддержкой...")
+    elif data == "help":
+        await callback.message.edit_text("Вот как мы можем помочь вам...")
+    elif data == "back":
+        # Assuming you want to return to the main menu
+        await callback.message.edit_text(
+            "Вы вернулись в главное меню.",
+            reply_markup=get_tourism_main_inline_keyboard(),
+        )
+    elif data == "main_menu":
+        # Assuming you want to return to the main menu
+        await callback.message.edit_text(
+            "Вы вернулись в главное меню.",
+            reply_markup=get_tourism_main_inline_keyboard(),
+        )
     else:
         await callback.answer("Unknown option.")
 
