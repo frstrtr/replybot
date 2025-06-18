@@ -356,32 +356,47 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
         await callback.answer()
         return
 
-    # Dictionary mapping callback_data to the response text
-    text_responses = {
-        "faq": "Здесь будут ответы на часто задаваемые вопросы.",
-        "prices": "Это информация о наших ценах.",
-        "contacts": "Наши контактные данные: ...",
-        "excursions": "Информация о доступных экскурсиях.",
-        "boats": "Информация об аренде лодок.",
-        "fishing": "Все о рыбалке с нами.",
-        "surfing": "Информация о серфинге.",
-        "windsurfing_kitesurfing": "Все о виндсерфинге и кайтсерфинге.",
-        "reviews": "Отзывы наших довольных клиентов.",
-        "about": "Краткая информация о нашей компании.",
-        "support": "Свяжитесь с нашей службой поддержки.",
-        "help": "Раздел помощи.",
+    # Словарь: callback_data -> (текст, file_id или None)
+    text_and_image_responses = {
+        "faq": ("Здесь будут ответы на часто задаваемые вопросы.", None),
+        "prices": ("Это информация о наших ценах.", None),
+        "contacts": ("Наши контактные данные: ...", None),
+        "excursions": ("Информация о доступных экскурсиях.", "fgdsfg-dfg-wBAAMCAANzAAM2BA"),
+        "boats": ("Информация об аренде лодок.", "dsfg-sdfg-wBAAMCAANzAAM2BA"),
+        "fishing": ("Все о рыбалке с нами.", None),
+        "surfing": ("Информация о серфинге.", None),
+        "windsurfing_kitesurfing": ("Все о виндсерфинге и кайтсерфинге.", None),
+        "reviews": ("Отзывы наших довольных клиентов.", None),
+        "about": ("Краткая информация о нашей компании.", None),
+        "support": ("Свяжитесь с нашей службой поддержки.", None),
+        "help": ("Раздел помощи.", None),
     }
 
-    response_text = text_responses.get(data)
+    response = text_and_image_responses.get(data)
 
-    # If a valid info button was pressed, show the text and the "back to main menu" keyboard
-    if response_text:
-        await callback.message.edit_text(
-            response_text,
-            reply_markup=get_back_to_main_menu_keyboard(),
-        )
+    if response:
+        text, file_id = response
+        if file_id:
+            try:
+                await callback.message.answer_photo(
+                    photo=file_id,
+                    caption=text,
+                    reply_markup=get_back_to_main_menu_keyboard()
+                )
+            except TelegramAPIError as e:
+                logging.error(f"Failed to send photo: {e}. Sending text only.", exc_info=True)
+                await callback.message.edit_text(
+                    text,
+                    reply_markup=get_back_to_main_menu_keyboard(),
+                )
+            await callback.answer()
+        else:
+            await callback.message.edit_text(
+                text,
+                reply_markup=get_back_to_main_menu_keyboard(),
+            )
+            await callback.answer()
     else:
-        # If the callback_data is unknown, just answer the callback to remove the "loading" state
         await callback.answer("Неизвестная команда.")
 
 
