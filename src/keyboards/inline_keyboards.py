@@ -31,15 +31,30 @@ def get_tourism_main_inline_keyboard():
     )
 
 
-def get_back_to_main_menu_keyboard():
+def get_back_to_main_menu_keyboard(back_callback_data="main_menu"):
     """
     Возвращает клавиатуру с кнопками "Назад" и "Главное меню".
+    back_callback_data: callback_data для кнопки "Назад"
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu"),
+                InlineKeyboardButton(text="⬅️ Назад", callback_data=back_callback_data),
                 InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"),
             ]
         ]
+    )
+
+
+def get_boats_submenu_keyboard():
+    """
+    Возвращает клавиатуру для подменю лодок.
+    """
+    boats_rows = [
+        [InlineKeyboardButton(text="🚤 boat1", callback_data="boat1"), InlineKeyboardButton(text="🛥️ boat2", callback_data="boat2")],
+        [InlineKeyboardButton(text="⛵ boat3", callback_data="boat3"), InlineKeyboardButton(text="🛶 boat4", callback_data="boat4")],
+    ]
+    back_menu_row = get_back_to_main_menu_keyboard(back_callback_data="boats_back").inline_keyboard[0]
+    return InlineKeyboardMarkup(
+        inline_keyboard=boats_rows + [back_menu_row]
     )

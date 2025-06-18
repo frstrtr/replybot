@@ -18,7 +18,7 @@ import os
 import config as app_config
 
 # from keyboards.reply_keyboards import get_tourism_main_keyboard
-from keyboards.inline_keyboards import get_tourism_main_inline_keyboard, get_back_to_main_menu_keyboard
+from keyboards.inline_keyboards import get_tourism_main_inline_keyboard, get_back_to_main_menu_keyboard, get_boats_submenu_keyboard
 
 business_router = Router()
 
@@ -381,6 +381,11 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
         "about": ("Краткая информация о нашей компании.", None),
         "support": ("Свяжитесь с нашей службой поддержки.", None),
         "help": ("Раздел помощи.", None),
+        "boat1": ("Информация о лодке 1.", None),
+        "boat2": ("Информация о лодке 2.", None),
+        "boat3": ("Информация о лодке 3.", None),
+        "boat4": ("Информация о лодке 4.", None),
+        "boats_back": ("Выберите тип лодки:", None),  # For the boats submenu
     }
 
     response = text_and_image_responses.get(data)
@@ -396,6 +401,20 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
                 await callback.answer()
                 return
             # back/main_menu handled above
+        elif data == "boats":
+            await callback.message.edit_text(
+                "Выберите тип лодки:",
+                reply_markup=get_boats_submenu_keyboard()
+            )
+            await callback.answer()
+            return
+        elif data in ("boat1", "boat2", "boat3", "boat4"):
+            await callback.message.edit_text(
+                f"Информация о {data}",
+                reply_markup=get_back_to_main_menu_keyboard()
+            )
+            await callback.answer()
+            return
         else:
             # Try to load HTML from file
             try:
@@ -420,6 +439,13 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
                     parse_mode="HTML"
                 )
             await callback.answer()
+        elif data == "boats_back":
+            await callback.message.edit_text(
+                "Выберите тип лодки:",
+                reply_markup=get_boats_submenu_keyboard()
+            )
+            await callback.answer()
+            return
         elif data not in ("help", "back", "main_menu"):
             await callback.message.edit_text(
                 text,
@@ -427,6 +453,7 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
                 parse_mode="HTML"
             )
             await callback.answer()
+
     else:
         await callback.answer("Неизвестная команда.")
 
