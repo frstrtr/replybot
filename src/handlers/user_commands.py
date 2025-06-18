@@ -1,5 +1,5 @@
 """This module handles user commands for a Telegram bot using aiogram."""
-from aiogram import types, Router, Dispatcher, Bot
+from aiogram import types, Router, Dispatcher
 from aiogram.filters import CommandStart, Command, CommandObject
 import logging
 from keyboards.inline_keyboards import get_tourism_main_inline_keyboard
@@ -8,7 +8,7 @@ from keyboards.inline_keyboards import get_tourism_main_inline_keyboard
 router = Router()
 
 @router.message(CommandStart(deep_link=True, deep_link_encoded=False))
-async def start_command_deeplink(message: types.Message, command: CommandObject, bot: Bot):
+async def start_command_deeplink(message: types.Message, command: CommandObject):
     """Handles /start command, potentially with a deep link."""
     args = command.args
     logging.info(f"Received /start command with args: {args} from user {message.from_user.id}") # pylint: disable=logging-fstring-interpolation

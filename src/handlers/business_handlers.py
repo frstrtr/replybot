@@ -376,7 +376,7 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
         "boats": ("Информация об аренде лодок.", "dsfg-sdfg-wBAAMCAANzAAM2BA"),
         "fishing": ("Все о рыбалке с нами.", None),
         "surfing": ("Информация о серфинге.", None),
-        "windsurfing_kitesurfing": ("Все о виндсерфинге и кайтсерфинге.", None),
+        "whales": ("Все о китах и дельфинах.", None),
         "reviews": ("Отзывы наших довольных клиентов.", None),
         "about": ("Краткая информация о нашей компании.", None),
         "support": ("Свяжитесь с нашей службой поддержки.", None),
@@ -401,7 +401,7 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
             try:
                 with open(os.path.join(RESPONSES_DIR, f"{data}.html"), encoding="utf-8") as f:
                     text = f.read()
-            except Exception as e:
+            except OSError as e:
                 logging.error(f"Failed to load response for {data}: {e}")
                 text = "<i>Ответ временно недоступен</i>"
         if file_id and data not in ("help", "back", "main_menu"):

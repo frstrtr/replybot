@@ -16,8 +16,8 @@ def get_tourism_main_inline_keyboard():
             [InlineKeyboardButton(text="🚤 Лодки", callback_data="boats"),
              InlineKeyboardButton(text="🎣 Рыбалка", callback_data="fishing")],
             # Ряд 4: Серфинг | Виндсерфинг & Кайтсерфинг
-            [InlineKeyboardButton(text="🏄 Серфинг", callback_data="surfing"),
-             InlineKeyboardButton(text="🪁 Виндсерфинг & Кайтсерфинг", callback_data="windsurfing_kitesurfing")],
+            [InlineKeyboardButton(text="🐳 Киты & Дельфины", callback_data="whales"),
+             InlineKeyboardButton(text="🏄 Винд Кайт & Cёрфинг", callback_data="surfing")],
             # Ряд 5: Отзывы | О нас
             [InlineKeyboardButton(text="⭐ Отзывы", callback_data="reviews"),
              InlineKeyboardButton(text="ℹ️ О нас", callback_data="about")],
