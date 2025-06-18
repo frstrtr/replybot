@@ -17,7 +17,7 @@ import html
 import config as app_config
 
 # from keyboards.reply_keyboards import get_tourism_main_keyboard
-from keyboards.inline_keyboards import get_tourism_main_inline_keyboard
+from keyboards.inline_keyboards import get_tourism_main_inline_keyboard, get_back_to_main_menu_keyboard
 
 business_router = Router()
 
@@ -339,47 +339,50 @@ async def handle_deleted_business_messages(event: BusinessMessagesDeleted, bot: 
 
 @business_router.callback_query()
 async def handle_tourism_menu_callback(callback: CallbackQuery):
+    """
+    Handles callbacks from the main tourism inline keyboard.
+    - If a user clicks an info button (e.g., FAQ, Prices), it shows the relevant text
+      and a keyboard with "Back" and "Main Menu" buttons.
+    - If a user clicks "Back" or "Main Menu", it returns to the full main menu.
+    """
     data = callback.data
-    if data == "faq":
-        await callback.message.edit_text("Вот часто задаваемые вопросы...")
-    elif data == "prices":
-        await callback.message.edit_text("Вот наши цены...")
-    elif data == "contacts":
-        await callback.message.edit_text("Наши контакты: ...")
-    elif data == "excursions":
-        await callback.message.edit_text("Вот наши экскурсии...")
-    elif data == "boats":
-        await callback.message.edit_text("Вот информация о лодках...")
-    elif data == "fishing":
-        await callback.message.edit_text("Вот информация о рыбалке...")
-    elif data == "surfing":
-        await callback.message.edit_text("Вот информация о серфинге...")
-    elif data == "windsurfing_kitesurfing":
-        await callback.message.edit_text(
-            "Вот информация о виндсерфинге и кайтсерфинге..."
-        )
-    elif data == "reviews":
-        await callback.message.edit_text("Вот отзывы наших клиентов...")
-    elif data == "about":
-        await callback.message.edit_text("Вот информация о нас...")
-    elif data == "support":
-        await callback.message.edit_text("Вот как связаться с нашей поддержкой...")
-    elif data == "help":
-        await callback.message.edit_text("Вот как мы можем помочь вам...")
-    elif data == "back":
-        # Assuming you want to return to the main menu
+
+    # Handler for "Back" and "Main Menu" buttons to return to the main keyboard
+    if data == "main_menu" or data == "back":
         await callback.message.edit_text(
             "Вы вернулись в главное меню.",
             reply_markup=get_tourism_main_inline_keyboard(),
         )
-    elif data == "main_menu":
-        # Assuming you want to return to the main menu
+        await callback.answer()
+        return
+
+    # Dictionary mapping callback_data to the response text
+    text_responses = {
+        "faq": "Здесь будут ответы на часто задаваемые вопросы.",
+        "prices": "Это информация о наших ценах.",
+        "contacts": "Наши контактные данные: ...",
+        "excursions": "Информация о доступных экскурсиях.",
+        "boats": "Информация об аренде лодок.",
+        "fishing": "Все о рыбалке с нами.",
+        "surfing": "Информация о серфинге.",
+        "windsurfing_kitesurfing": "Все о виндсерфинге и кайтсерфинге.",
+        "reviews": "Отзывы наших довольных клиентов.",
+        "about": "Краткая информация о нашей компании.",
+        "support": "Свяжитесь с нашей службой поддержки.",
+        "help": "Раздел помощи.",
+    }
+
+    response_text = text_responses.get(data)
+
+    # If a valid info button was pressed, show the text and the "back to main menu" keyboard
+    if response_text:
         await callback.message.edit_text(
-            "Вы вернулись в главное меню.",
-            reply_markup=get_tourism_main_inline_keyboard(),
+            response_text,
+            reply_markup=get_back_to_main_menu_keyboard(),
         )
     else:
-        await callback.answer("Unknown option.")
+        # If the callback_data is unknown, just answer the callback to remove the "loading" state
+        await callback.answer("Неизвестная команда.")
 
 
 def register_business_handlers(

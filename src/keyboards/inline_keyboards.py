@@ -29,3 +29,17 @@ def get_tourism_main_inline_keyboard():
              InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
         ]
     )
+
+
+def get_back_to_main_menu_keyboard():
+    """
+    Возвращает клавиатуру с кнопками "Назад" и "Главное меню".
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu"),
+                InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"),
+            ]
+        ]
+    )
