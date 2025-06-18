@@ -12,6 +12,7 @@ from aiogram.types import (
 )
 from aiogram.exceptions import TelegramAPIError
 import html
+import os
 
 # Import the configuration module
 import config as app_config
@@ -69,6 +70,8 @@ else:
         "Bot will rely solely on dynamic BusinessConnection updates."
     )
 # --- End of Config-based Initialization ---
+
+RESPONSES_DIR = os.path.join(os.path.dirname(__file__), '../../static/responses')
 
 
 @business_router.business_connection()
@@ -232,7 +235,7 @@ async def handle_business_message(message: Message, bot: Bot):
                 chat_id=business_owner_chat_id,
                 text=(
                     f"FYI: Received a message from {client_name_html} in chat {client_chat_id} (with your business): "
-                    f"'{html.escape(message.text)}'.\n"
+                    f"'{html.escape(message.text or '')}'.\n"
                     f"I can reply directly as 'can_reply' right is currently True for this connection.\n"
                     f"{client_link}\n"
                     f"{android_link}\n"
@@ -277,7 +280,7 @@ async def handle_business_message(message: Message, bot: Bot):
                 chat_id=business_owner_chat_id,
                 text=(
                     f"FYI: Received a message from {client_name_html} in chat {client_chat_id} (with your business): "
-                    f"'{html.escape(message.text)}'.\n"
+                    f"'{html.escape(message.text or '')}'.\n"
                     f"I cannot reply directly as 'can_reply' right is currently False for this connection.\n"
                     f"{client_link}\n"
                     f"{android_link}\n"
@@ -349,10 +352,18 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
 
     # Handler for "Back" and "Main Menu" buttons to return to the main keyboard
     if data == "main_menu" or data == "back":
-        await callback.message.edit_text(
-            "Вы вернулись в главное меню.",
-            reply_markup=get_tourism_main_inline_keyboard(),
-        )
+        try:
+            await callback.message.edit_text(
+                "Вы вернулись в главное меню.",
+                reply_markup=get_tourism_main_inline_keyboard(),
+            )
+        except TelegramAPIError as e:
+            if "message is not modified" in str(e):
+                # Just answer the callback to remove the loading state
+                await callback.answer()
+                return
+            else:
+                logging.error(f"Failed to edit main menu: {e}", exc_info=True)
         await callback.answer()
         return
 
@@ -374,26 +385,46 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
 
     response = text_and_image_responses.get(data)
 
+    # For all buttons except help, back, main_menu, use text from html files
     if response:
         text, file_id = response
-        if file_id:
+        if data in ("help", "back", "main_menu"):
+            if data == "help":
+                await callback.message.edit_text(
+                    "Зову оператора! Для возврата к меню используйте команду /menu"
+                )
+                await callback.answer()
+                return
+            # back/main_menu handled above
+        else:
+            # Try to load HTML from file
+            try:
+                with open(os.path.join(RESPONSES_DIR, f"{data}.html"), encoding="utf-8") as f:
+                    text = f.read()
+            except Exception as e:
+                logging.error(f"Failed to load response for {data}: {e}")
+                text = "<i>Ответ временно недоступен</i>"
+        if file_id and data not in ("help", "back", "main_menu"):
             try:
                 await callback.message.answer_photo(
                     photo=file_id,
                     caption=text,
-                    reply_markup=get_back_to_main_menu_keyboard()
+                    reply_markup=get_back_to_main_menu_keyboard(),
+                    parse_mode="HTML"
                 )
             except TelegramAPIError as e:
                 logging.error(f"Failed to send photo: {e}. Sending text only.", exc_info=True)
                 await callback.message.edit_text(
                     text,
                     reply_markup=get_back_to_main_menu_keyboard(),
+                    parse_mode="HTML"
                 )
             await callback.answer()
-        else:
+        elif data not in ("help", "back", "main_menu"):
             await callback.message.edit_text(
                 text,
                 reply_markup=get_back_to_main_menu_keyboard(),
+                parse_mode="HTML"
             )
             await callback.answer()
     else:

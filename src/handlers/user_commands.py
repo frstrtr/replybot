@@ -2,6 +2,7 @@
 from aiogram import types, Router, Dispatcher, Bot
 from aiogram.filters import CommandStart, Command, CommandObject
 import logging
+from keyboards.inline_keyboards import get_tourism_main_inline_keyboard
 
 # Create a new Router instance
 router = Router()
@@ -46,6 +47,14 @@ async def help_command(message: types.Message):
         "/help - Get help\n"
         "If you are a Telegram Business user, connect this bot via @BotFather (enable Business Mode) "
         "to manage client interactions."
+    )
+
+@router.message(Command("menu"))
+async def menu_command(message: types.Message):
+    """Handles /menu command and returns the main inline keyboard."""
+    await message.answer(
+        "Главное меню:",
+        reply_markup=get_tourism_main_inline_keyboard()
     )
 
 def register_user_command_handlers(dp: Dispatcher):
