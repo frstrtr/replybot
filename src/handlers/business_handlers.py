@@ -343,14 +343,11 @@ async def handle_deleted_business_messages(event: BusinessMessagesDeleted, bot: 
 @business_router.callback_query()
 async def handle_tourism_menu_callback(callback: CallbackQuery):
     """
-    Handles callbacks from the main tourism inline keyboard.
-    - If a user clicks an info button (e.g., FAQ, Prices), it shows the relevant text
-      and a keyboard with "Back" and "Main Menu" buttons.
-    - If a user clicks "Back" or "Main Menu", it returns to the full main menu.
+    Handles callbacks from all inline keyboards, including the main menu and submenus.
     """
     data = callback.data
 
-    # Handler for "Back" and "Main Menu" buttons to return to the main keyboard
+    # --- Navigation Handlers ---
     if data == "main_menu" or data == "back":
         try:
             await callback.message.edit_text(
@@ -358,111 +355,129 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
                 reply_markup=get_tourism_main_inline_keyboard(),
             )
         except TelegramAPIError as e:
-            if "message is not modified" in str(e):
-                # Just answer the callback to remove the loading state
-                await callback.answer()
-                return
-            else:
+            if "message is not modified" not in str(e):
                 logging.error(f"Failed to edit main menu: {e}", exc_info=True)
         await callback.answer()
         return
 
-    # Словарь: callback_data -> (текст, file_id или None)
-    text_and_image_responses = {
-        "faq": ("Здесь будут ответы на часто задаваемые вопросы.", None),
-        "prices": ("Это информация о наших ценах.", None),
-        "contacts": ("Наши контактные данные: ...", None),
-        "excursions": ("Информация о доступных экскурсиях.", None),
-        "boats": ("Информация об аренде лодок.", None),
-        "fishing": ("Все о рыбалке с нами.", None),
-        "surfing": ("Информация о серфинге.", None),
-        "whales": ("Все о китах и дельфинах.", None),
-        "reviews": ("Отзывы наших довольных клиентов.", None),
-        "about": ("Краткая информация о нашей компании.", None),
-        "support": ("Свяжитесь с нашей службой поддержки.", None),
-        "help": ("Раздел помощи.", None),
-        "boat1": ("Информация о лодке 1.", None),
-        "boat2": ("Информация о лодке 2.", None),
-        "boat3": ("Информация о лодке 3.", None),
-        "boat4": ("Информация о лодке 4.", None),
-        "boats_back": ("Выберите тип лодки:", None),  # For the boats submenu
+    if data == "boats":
+        await callback.message.edit_text(
+            "Выберите тип лодки:", reply_markup=get_boats_submenu_keyboard()
+        )
+        await callback.answer()
+        return
+
+    if data == "boats_back":
+        try:
+            await callback.message.edit_text(
+                "Выберите тип лодки:", reply_markup=get_boats_submenu_keyboard()
+            )
+        except TelegramAPIError as e:
+            if "message is not modified" not in str(e):
+                logging.error(f"Failed to edit boats submenu: {e}", exc_info=True)
+        await callback.answer()
+        return
+
+    if data == "help":
+        await callback.message.edit_text(
+            "Зову оператора! Для возврата к меню используйте команду /menu"
+        )
+        await callback.answer()
+        return
+
+    # --- Universal Content Handler for all other buttons ---
+
+    # Define response configurations including navigation targets for the "Back" button
+    responses_config = {
+        # Main Menu Items -> back to main_menu
+        "faq": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
+        "prices": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
+        "contacts": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
+        "excursions": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
+        "fishing": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
+        "surfing": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
+        "whales": {"default_text": "...", "file_id": 'https://t.me/mauritiusTransfer/3427', "back_to": "main_menu"},
+        "reviews": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
+        "about": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
+        "support": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
+        
+        # Boats Submenu Items -> back to boats_back (the boat selection menu)
+        "boat1": {"default_text": "...", "file_id": None, "back_to": "boats_back"},
+        "boat2": {"default_text": "...", "file_id": None, "back_to": "boats_back"},
+        "boat3": {"default_text": "...", "file_id": None, "back_to": "boats_back"},
+        "boat4": {"default_text": "...", "file_id": None, "back_to": "boats_back"},
     }
 
-    response = text_and_image_responses.get(data)
+    config = responses_config.get(data)
+    if not config:
+        await callback.answer("Неизвестная команда.")
+        return
 
-    # For all buttons except help, back, main_menu, use text from html files
-    if response:
-        text, file_id = response
-        if data in ("help", "back", "main_menu"):
-            if data == "help":
+    default_text = config.get("default_text", "")
+    file_id = config.get("file_id")
+    back_callback = config.get("back_to", "main_menu") # Default to main_menu
+    text = default_text
+
+    # Try to load response from file, overriding default_text
+    try:
+        with open(os.path.join(RESPONSES_DIR, f"{data}.html"), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        logging.warning(f"Response file for '{data}.html' not found. Using default text.")
+
+    # Process the response based on whether a file_id exists and what it is
+    try:
+        if file_id:
+            # Case 1: The 'file_id' is a URL. Append it to the text and enable preview.
+            if file_id.startswith('http'):
+                full_text = f"{text}\n\n{file_id}"  # Append URL directly to the text
                 await callback.message.edit_text(
-                    "Зову оператора! Для возврата к меню используйте команду /menu"
+                    full_text,
+                    reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
+                    parse_mode="HTML",
+                    disable_web_page_preview=False  # Ensure link preview is enabled
                 )
-                await callback.answer()
-                return
-            # back/main_menu handled above
-        elif data == "boats":
-            await callback.message.edit_text(
-                "Выберите тип лодки:",
-                reply_markup=get_boats_submenu_keyboard()
-            )
-            await callback.answer()
-            return
-        elif data in ("boat1", "boat2", "boat3", "boat4"):
-            await callback.message.edit_text(
-                f"Информация о {data}",
-                reply_markup=get_back_to_main_menu_keyboard(back_callback_data="boats")
-            )
-            await callback.answer()
-            return
-        else:
-            # Try to load HTML from file
-            try:
-                with open(os.path.join(RESPONSES_DIR, f"{data}.html"), encoding="utf-8") as f:
-                    text = f.read()
-            except OSError as e:
-                logging.error(f"Failed to load response for {data}: {e}")
-                text = "<i>Ответ временно недоступен</i>"
-        if file_id and data not in ("help", "back", "main_menu"):
-            try:
-                await callback.message.answer_photo(
-                    photo=file_id,
-                    caption=text,
-                    reply_markup=get_back_to_main_menu_keyboard(),
-                    parse_mode="HTML"
-                )
-            except TelegramAPIError as e:
-                logging.error(f"Failed to send photo: {e}. Sending text only.", exc_info=True)
-                await callback.message.edit_text(
-                    text,
-                    reply_markup=get_back_to_main_menu_keyboard(),
-                    parse_mode="HTML"
-                )
-            await callback.answer()
-        elif data == "boats_back":
-            try:
-                await callback.message.edit_text(
-                    "Выберите тип лодки:",
-                    reply_markup=get_boats_submenu_keyboard()
-                )
-            except TelegramAPIError as e:
-                if "message is not modified" in str(e):
-                    await callback.answer()
-                    return
+            # Case 2: The 'file_id' is a real photo ID.
+            else:
+                if len(text) > 1024:
+                    logging.warning("Caption is too long. Sending photo and text separately.")
+                    await callback.message.answer_photo(photo=file_id)
+                    await callback.message.answer(
+                        text,
+                        reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
+                        parse_mode="HTML"
+                    )
                 else:
-                    logging.error(f"Failed to edit boats submenu: {e}", exc_info=True)
-            await callback.answer()
-            return
-        elif data not in ("help", "back", "main_menu"):
+                    await callback.message.answer_photo(
+                        photo=file_id,
+                        caption=text,
+                        reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
+                        parse_mode="HTML"
+                    )
+                await callback.message.edit_reply_markup(reply_markup=None)
+        else:
+            # Case 3: No file_id, just edit the text.
             await callback.message.edit_text(
                 text,
-                reply_markup=get_back_to_main_menu_keyboard(),
+                reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
                 parse_mode="HTML"
             )
-            await callback.answer()
+    except TelegramAPIError as e:
+        if "message is not modified" in str(e):
+            # This is not an error, just a user pressing the same button twice.
+            # Silently ignore it.
+            pass
+        else:
+            logging.error(f"Error processing callback for '{data}': {e}. Sending fallback text.", exc_info=True)
+            try:
+                await callback.message.edit_text(
+                    "Произошла ошибка при обработке вашего запроса. Попробуйте позже.",
+                    reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback)
+                )
+            except TelegramAPIError:
+                pass  # If even the fallback fails, do nothing.
 
-    else:
-        await callback.answer("Неизвестная команда.")
+    await callback.answer()
 
 
 def register_business_handlers(
