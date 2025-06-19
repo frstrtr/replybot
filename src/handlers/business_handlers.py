@@ -372,8 +372,8 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
         "faq": ("Здесь будут ответы на часто задаваемые вопросы.", None),
         "prices": ("Это информация о наших ценах.", None),
         "contacts": ("Наши контактные данные: ...", None),
-        "excursions": ("Информация о доступных экскурсиях.", "fgdsfg-dfg-wBAAMCAANzAAM2BA"),
-        "boats": ("Информация об аренде лодок.", "dsfg-sdfg-wBAAMCAANzAAM2BA"),
+        "excursions": ("Информация о доступных экскурсиях.", None),
+        "boats": ("Информация об аренде лодок.", None),
         "fishing": ("Все о рыбалке с нами.", None),
         "surfing": ("Информация о серфинге.", None),
         "whales": ("Все о китах и дельфинах.", None),
@@ -411,7 +411,7 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
         elif data in ("boat1", "boat2", "boat3", "boat4"):
             await callback.message.edit_text(
                 f"Информация о {data}",
-                reply_markup=get_back_to_main_menu_keyboard()
+                reply_markup=get_back_to_main_menu_keyboard(back_callback_data="boats")
             )
             await callback.answer()
             return
@@ -440,10 +440,17 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
                 )
             await callback.answer()
         elif data == "boats_back":
-            await callback.message.edit_text(
-                "Выберите тип лодки:",
-                reply_markup=get_boats_submenu_keyboard()
-            )
+            try:
+                await callback.message.edit_text(
+                    "Выберите тип лодки:",
+                    reply_markup=get_boats_submenu_keyboard()
+                )
+            except TelegramAPIError as e:
+                if "message is not modified" in str(e):
+                    await callback.answer()
+                    return
+                else:
+                    logging.error(f"Failed to edit boats submenu: {e}", exc_info=True)
             await callback.answer()
             return
         elif data not in ("help", "back", "main_menu"):
