@@ -71,7 +71,7 @@ else:
     )
 # --- End of Config-based Initialization ---
 
-RESPONSES_DIR = os.path.join(os.path.dirname(__file__), 'static/responses')
+RESPONSES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../static/responses'))
 
 
 @business_router.business_connection()
