@@ -9,6 +9,7 @@ from aiogram.types import (
     User,
     CallbackQuery,
 )
+import aiofiles # Import aiofiles
 from aiogram.exceptions import TelegramAPIError
 import html
 import os
@@ -127,9 +128,9 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
             # If a text_path is provided for a menu, try to load it.
             if "text_path" in node:
                 client_response_path = os.path.join(RESPONSES_DIR, business_connection_id, node["text_path"])
-                try:
-                    with open(client_response_path, encoding="utf-8") as f:
-                        text = f.read()
+                try: # Use aiofiles for async file reading
+                    async with aiofiles.open(client_response_path, mode='r', encoding="utf-8") as f:
+                        text = await f.read()
                 except FileNotFoundError:
                     logging.warning(f"Menu text file not found: {client_response_path}. Using default text.")
                 except OSError as e:
@@ -143,9 +144,9 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
             # Construct the client-specific path for the response file
             client_response_path = os.path.join(RESPONSES_DIR, business_connection_id, node["text_path"])
             
-            try:
-                with open(client_response_path, encoding="utf-8") as f:
-                    text = f.read()
+            try: # Use aiofiles for async file reading
+                async with aiofiles.open(client_response_path, mode='r', encoding="utf-8") as f:
+                    text = await f.read()
             except FileNotFoundError:
                 logging.warning(f"Response file not found at client-specific path: {client_response_path}")
                 text = "<i>Контент временно недоступен.</i>"

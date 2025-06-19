@@ -7,7 +7,7 @@ import config as app_config
 
 # --- Define the structure for a default menu ---
 # This is a template that can be reused or used as a fallback.
-CLIENT1_MENU_STRUCTURE = {
+DEFAULT_MENU_STRUCTURE = {
     # --- Main Menu Nodes ---
     "main_menu": {
         "type": "menu",
@@ -15,7 +15,6 @@ CLIENT1_MENU_STRUCTURE = {
         "buttons": [
             [{"text": "💰 Цены", "target": "prices"}, {"text": "❓ ЧаВо", "target": "faq"}],
             [{"text": "🚤 Лодки", "target": "boats_menu"}, {"text": "🗺️ Экскурсии", "target": "excursions"}],
-            [{"text": "🐳 Киты & Дельфины", "target": "whales"}, {"text": "🏄 Винд Кайт & Cёрфинг", "target": "surfing"}],
             [{"text": "🎣 Рыбалка", "target": "fishing"}, {"text": "⭐ Отзывы", "target": "reviews"}],
             [{"text": "ℹ️ О нас", "target": "about"}, {"text": "📞 Контакты", "target": "contacts"}],
             [{"text": "🆘 Помощь", "target": "help"}],
@@ -24,7 +23,6 @@ CLIENT1_MENU_STRUCTURE = {
     "boats_menu": {
         "type": "menu",
         "text": "Выберите тип лодки:",
-        "text_path": "boats_menu.html",  # Optional HTML file for the menu
         "buttons": [
             [{"text": "Катер 'Бриз'", "target": "boat1"}, {"text": "Яхта 'Победа'", "target": "boat2"}],
             [{"text": "Лодка 'Удача'", "target": "boat3"}, {"text": "Катамаран 'Лагуна'", "target": "boat4"}],
@@ -38,8 +36,6 @@ CLIENT1_MENU_STRUCTURE = {
     "prices":     {"type": "content", "text_path": "prices.html", "back_to": "main_menu"},
     "faq":        {"type": "content", "text_path": "faq.html", "back_to": "main_menu"},
     "excursions": {"type": "content", "text_path": "excursions.html", "back_to": "main_menu"},
-    "surfing":    {"type": "content", "text_path": "surfing.html", "back_to": "main_menu"},
-    "whales":     {"type": "content", "text_path": "whales.html", "back_to": "main_menu"},
     "fishing":    {"type": "content", "text_path": "fishing.html", "file_id": "https://t.me/mauritiusTransfer/3427", "back_to": "main_menu"},
     "reviews":    {"type": "content", "text_path": "reviews.html", "back_to": "main_menu"},
     "about":      {"type": "content", "text_path": "about.html", "back_to": "main_menu"},
@@ -56,7 +52,7 @@ CLIENT1_MENU_STRUCTURE = {
 # Map a business_connection_id to a specific menu structure.
 CLIENT_MENUS = {
     # Example for the hardcoded client from your config file
-    app_config.HC_BUSINESS_CONNECTION_ID: CLIENT1_MENU_STRUCTURE,
+    app_config.HC_BUSINESS_CONNECTION_ID: DEFAULT_MENU_STRUCTURE,
     
     # Example for another client with a completely different menu
     # "another_business_connection_id": ANOTHER_MENU_STRUCTURE,
@@ -67,4 +63,4 @@ def get_menu_for_client(business_connection_id: str) -> dict:
     Returns the menu structure for a given client ID.
     Falls back to the default menu if the client is not specifically configured.
     """
-    return CLIENT_MENUS.get(business_connection_id, CLIENT1_MENU_STRUCTURE)
+    return CLIENT_MENUS.get(business_connection_id, DEFAULT_MENU_STRUCTURE)
