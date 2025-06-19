@@ -1,5 +1,23 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+def build_keyboard_from_config(buttons_config: list[list[dict]]) -> InlineKeyboardMarkup:
+    """
+    Builds an InlineKeyboardMarkup from a nested list of button configurations.
+    
+    :param buttons_config: A list of lists, where each inner list is a row of buttons.
+                           Each button is a dict with "text" and "target" (callback_data).
+    :return: An InlineKeyboardMarkup object.
+    """
+    keyboard_rows = []
+    for row_config in buttons_config:
+        row = [
+            InlineKeyboardButton(text=button["text"], callback_data=button["target"])
+            for button in row_config
+        ]
+        keyboard_rows.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
+
+
 def get_tourism_main_inline_keyboard():
     """
     Возвращает основную встроенную клавиатуру для туристического бота с измененным порядком кнопок.

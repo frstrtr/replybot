@@ -1,486 +1,197 @@
 """Module for handling business connections and messages in a Telegram bot using aiogram."""
 
 import logging
-from aiogram import Router, F, Bot, Dispatcher
+from aiogram import Router, Bot, Dispatcher
 from aiogram.types import (
     Message,
     BusinessConnection,
-    BusinessMessagesDeleted,
+    # BusinessMessagesDeleted,
     User,
-    BusinessBotRights,
     CallbackQuery,
 )
 from aiogram.exceptions import TelegramAPIError
 import html
 import os
 
-# Import the configuration module
+# Import the configuration and menu modules
 import config as app_config
-
-# from keyboards.reply_keyboards import get_tourism_main_keyboard
-from keyboards.inline_keyboards import get_tourism_main_inline_keyboard, get_back_to_main_menu_keyboard, get_boats_submenu_keyboard
+from menu_config import get_menu_for_client
+from keyboards.inline_keyboards import build_keyboard_from_config
 
 business_router = Router()
 
 # Dictionary to store active business connections
-# Key: business_connection_id (str)
-# Value: dict containing "user_chat_id", "rights" (BusinessBotRights), and "user" (User)
 active_business_connections: dict = {}
 
 # --- Hardcoded Business Connection Details (Loaded from Config) ---
-# These are used if the bot is intended for a single, known business account
-# and persistent storage for connections isn't fully implemented.
-
-# Define default rights for the hardcoded connection
-# Adjust these if you know the specific rights for your connection.
-hardcoded_rights = BusinessBotRights(
-    can_reply=True,
-    can_read_messages=True,
-    # Set other rights as needed, defaulting to None or False if unsure
-    can_delete_outgoing_messages=False,
-    can_delete_all_messages=False,
-    can_edit_name=False,
-    can_edit_bio=False,
-    can_edit_profile_photo=False,
-    can_edit_username=False,
-    can_change_gift_settings=False,
-    can_view_gifts_and_stars=False,
-    can_convert_gifts_to_stars=False,
-    can_manage_stories=False,
-)
-
-# Pre-populate active_business_connections if config values are set
 if app_config.HC_BUSINESS_CONNECTION_ID and app_config.HC_BUSINESS_OWNER_CHAT_ID:
     active_business_connections[app_config.HC_BUSINESS_CONNECTION_ID] = {
         "user_chat_id": app_config.HC_BUSINESS_OWNER_CHAT_ID,
-        "rights": hardcoded_rights,  # Using the predefined rights object
-        "user": User(
-            id=app_config.HC_BUSINESS_OWNER_CHAT_ID,
-            is_bot=False,
-            first_name="Business Owner (from config)",
-        ),  # Dummy User
+        "user": User(id=app_config.HC_BUSINESS_OWNER_CHAT_ID, is_bot=False, first_name="Owner"),
     }
-    logging.info(
-        f"Initialized with business connection from config: "
-        f"ID='{app_config.HC_BUSINESS_CONNECTION_ID}', OwnerChatID='{app_config.HC_BUSINESS_OWNER_CHAT_ID}'"
-    )
-else:
-    logging.warning(
-        "HC_BUSINESS_CONNECTION_ID or HC_BUSINESS_OWNER_CHAT_ID not found in config. "
-        "Bot will rely solely on dynamic BusinessConnection updates."
-    )
-# --- End of Config-based Initialization ---
+    logging.info(f"Initialized with business connection from config: ID='{app_config.HC_BUSINESS_CONNECTION_ID}'")
 
 RESPONSES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../static/responses'))
 
 
 @business_router.business_connection()
 async def handle_business_connection(business_connection: BusinessConnection, bot: Bot):
-    """
-    Handles BusinessConnection updates.
-    A user has established, edited, or ended a Business Connection with the bot.
-    This will override hardcoded data if a new connection event for the same ID occurs.
-    """
+    """Handles BusinessConnection updates."""
     connection_id = business_connection.id
     user_chat_id = business_connection.user_chat_id
     is_enabled = business_connection.is_enabled
-    rights = business_connection.rights
 
-    logging.info(
-        f"BusinessConnection Update Received: ID={connection_id}, UserChatID={user_chat_id}, "
-        f"IsEnabled={is_enabled}, BotID={bot.id}"
-    )
-    if rights:
-        rights_summary = ", ".join(
-            f"{right_name}={getattr(rights, right_name)}"
-            for right_name in [
-                "can_reply",
-                "can_read_messages",
-                "can_delete_outgoing_messages",
-                "can_delete_all_messages",
-                "can_edit_name",
-                "can_edit_bio",
-                "can_edit_profile_photo",
-                "can_edit_username",
-                "can_change_gift_settings",
-                "can_view_gifts_and_stars",
-                "can_convert_gifts_to_stars",
-                "can_transfer_and_upgrade_gifts",
-                "can_transfer_stars",
-                "can_manage_stories",
-            ]
-            if hasattr(rights, right_name) and getattr(rights, right_name) is not None
-        )
-        logging.info(f"Business Rights for {connection_id} from API: {rights_summary}")
+    logging.info(f"BusinessConnection Update: ID={connection_id}, UserChatID={user_chat_id}, IsEnabled={is_enabled}")
 
-    if is_enabled and rights:
+    if is_enabled:
         active_business_connections[connection_id] = {
             "user_chat_id": user_chat_id,
-            "rights": rights,  # Use rights from the API event
             "user": business_connection.user,
         }
-        logging.info(
-            f"Updated/Set active_business_connections for {connection_id} from API event."
-        )
-        await bot.send_message(
-            chat_id=user_chat_id,
-            text=f"Business connection (ID: {connection_id}) is now active. Rights updated from API.",
-        )
-    elif not is_enabled:
-        if connection_id in active_business_connections:
-            del active_business_connections[connection_id]
-            logging.info(
-                f"Removed business connection {connection_id} from active store due to API event (is_enabled=False)."
-            )
-        await bot.send_message(
-            chat_id=user_chat_id,
-            text=f"Your business connection (ID: {connection_id}) has been disabled or removed via API event.",
-        )
-    else:
-        logging.warning(
-            f"Business connection {connection_id} update: is_enabled={is_enabled}, but rights are missing. Not updating store."
-        )
+        await bot.send_message(chat_id=user_chat_id, text=f"Business connection (ID: {connection_id}) is now active.")
+    elif not is_enabled and connection_id in active_business_connections:
+        del active_business_connections[connection_id]
+        await bot.send_message(chat_id=user_chat_id, text=f"Business connection (ID: {connection_id}) has been disabled.")
 
 
 @business_router.business_message()
 async def handle_business_message(message: Message, bot: Bot):
-    """
-    Handles incoming messages via a Business Connection.
-    These are messages from clients to the business account.
-    """
-    logging.info("--- handle_business_message TRIGGERED ---")
-    logging.debug(
-        f"Incoming Business Message Object: {message.model_dump_json(indent=2)}"
-    )
-
+    """Handles incoming messages via a Business Connection."""
     business_connection_id = message.business_connection_id
-    # The 'user' who sent the message to the business account (the client)
     client_user: User | None = message.from_user
-    # The chat where the message occurred (between client and business)
     client_chat_id = message.chat.id
 
-    if not business_connection_id:
-        logging.warning(
-            "CRITICAL: Received business_message WITHOUT business_connection_id. Cannot process."
-        )
+    if not business_connection_id or not client_user:
         return
 
-    logging.info(
-        f"\nProcessing Business Message:\n"
-        f"Business ConnectionID='{business_connection_id}', ClientChatID='{client_chat_id}', "
-        f"ClientUser='{client_user.full_name if client_user else 'Unknown Client'}', Text:\n'{message.text}', "
-    )
-
-    logging.debug(
-        f"Current active_business_connections state: {active_business_connections}"
-    )
-    connection_details = active_business_connections.get(business_connection_id)
-
-    if not connection_details:
-        logging.warning(
-            f"No business connection found in store for ID: '{business_connection_id}'."
-        )
-        # If HC_BUSINESS_CONNECTION_ID was set but doesn't match, this log is important.
-        # If it wasn't set, this is expected until a BusinessConnection update.
-        return
-
-    logging.debug(
-        f"Found connection details for '{business_connection_id}': {connection_details}"
-    )
-
-    if "rights" not in connection_details or not connection_details["rights"]:
-        logging.warning(
-            f"Connection details for '{business_connection_id}' exist, but 'rights' are missing or empty."
-        )
-        return
-
-    current_rights = connection_details["rights"]
-    logging.info(
-        f"Rights for connection '{business_connection_id}': can_reply={current_rights.can_reply}"
-    )
-
-    if (
-        current_rights.can_reply
-        and client_user.full_name != app_config.AUTHORIZED_FULL_NAME
-    ):
-        response_text = "Пожалуйста, выберите нужный вопрос ниже или задайте свой."
-        try:
+    # --- Send the initial menu based on the configuration ---
+    if client_user.full_name != app_config.AUTHORIZED_FULL_NAME:
+        menu_structure = get_menu_for_client(business_connection_id)
+        main_menu_node = menu_structure.get("main_menu")
+        
+        if main_menu_node:
+            keyboard = build_keyboard_from_config(main_menu_node["buttons"])
             await bot.send_message(
                 chat_id=client_chat_id,
-                text=response_text,
+                text=main_menu_node["text"],
                 business_connection_id=business_connection_id,
-                reply_markup=get_tourism_main_inline_keyboard(),
+                reply_markup=keyboard,
             )
-            logging.info(f"Sent tourism main menu to client in chat {client_chat_id}.")
-        except TelegramAPIError as e:
-            logging.error(f"Failed to send menu: {e}", exc_info=True)
-
-        business_owner_chat_id = connection_details.get("user_chat_id")
-        client_name = client_user.full_name if client_user else "A client"
-        # Escape HTML special characters in the name
-        safe_name = html.escape(client_name)
-        client_link = ""
-        android_link = ""
-        apple_link = ""
-        if client_user:
-            client_link = f"tg://user?id={client_user.id}"
-            android_link = f"tg://openmessage?user_id={client_user.id}"
-            apple_link = f"https://t.me/@id{client_user.id}"
-            client_name_html = f"<a href='{client_link}'>{safe_name}</a>"
-        else:
-            client_name_html = safe_name
-
-        try:
-            await bot.send_message(
-                chat_id=business_owner_chat_id,
-                text=(
-                    f"FYI: Received a message from {client_name_html} in chat {client_chat_id} (with your business): "
-                    f"'{html.escape(message.text or '')}'.\n"
-                    f"I can reply directly as 'can_reply' right is currently True for this connection.\n"
-                    f"{client_link}\n"
-                    f"{android_link}\n"
-                    f"{apple_link}"
-                ),
-                parse_mode="HTML",
-                disable_web_page_preview=True,
-            )
-            logging.info(
-                f"Notified business owner ({business_owner_chat_id}) about message from client."
-            )
-        except TelegramAPIError as e:
-            logging.error(
-                f"ERROR: Failed to notify business owner {business_owner_chat_id}: {e}",
-                exc_info=True,
-            )
-
-    elif (
-        current_rights.can_reply is False
-        and client_user.full_name != app_config.AUTHORIZED_FULL_NAME
-    ):
-        logging.info(
-            f"Bot cannot reply for business connection '{business_connection_id}' as 'can_reply' is False."
+    
+    # --- Notify business owner (logic remains the same) ---
+    connection_details = active_business_connections.get(business_connection_id)
+    if connection_details and connection_details.get("user_chat_id"):
+        owner_chat_id = connection_details["user_chat_id"]
+        client_name_html = f"<a href='tg://user?id={client_user.id}'>{html.escape(client_user.full_name)}</a>"
+        notification_text = (
+            f"Received message from {client_name_html} (Chat ID: {client_chat_id}):\n"
+            f"<i>{html.escape(message.text or '[No Text]')}</i>"
         )
-        business_owner_chat_id = connection_details.get("user_chat_id")
-        client_name = client_user.full_name if client_user else "A client"
-        # Escape HTML special characters in the name
-        safe_name = html.escape(client_name)
-        client_link = ""
-        android_link = ""
-        apple_link = ""
-        if client_user:
-            client_link = f"tg://user?id={client_user.id}"
-            android_link = f"tg://openmessage?user_id={client_user.id}"
-            apple_link = f"https://t.me/@id{client_user.id}"
-            client_name_html = f"<a href='{client_link}'>{safe_name}</a>"
-        else:
-            client_name_html = safe_name
-
         try:
             await bot.send_message(
-                chat_id=business_owner_chat_id,
-                text=(
-                    f"FYI: Received a message from {client_name_html} in chat {client_chat_id} (with your business): "
-                    f"'{html.escape(message.text or '')}'.\n"
-                    f"I cannot reply directly as 'can_reply' right is currently False for this connection.\n"
-                    f"{client_link}\n"
-                    f"{android_link}\n"
-                    f"{apple_link}"
-                ),
+                chat_id=owner_chat_id,
+                text=notification_text,
                 parse_mode="HTML",
-                disable_web_page_preview=True,
-            )
-            logging.info(
-                f"Notified business owner ({business_owner_chat_id}) about unanswerable message from client."
+                disable_web_page_preview=True
             )
         except TelegramAPIError as e:
-            logging.error(
-                f"ERROR: Failed to notify business owner {business_owner_chat_id}: {e}",
-                exc_info=True,
-            )
-
-
-@business_router.edited_business_message(
-    F.business_message
-)  # Handle edited business messages
-async def handle_edited_business_message(message: Message, bot: Bot):
-    """Handles edited messages in a Business Connection.
-    This is triggered when a client edits their message in the business chat.
-    """
-    business_connection_id = message.business_connection_id
-    client_chat_id = message.chat.id
-    logging.info(
-        f"Edited Business Message: ConnectionID={business_connection_id}, ClientChatID={client_chat_id}, "
-        f"New Text='{message.text}'"
-    )
-    # Add logic to process edited messages if needed, similar to handle_business_message
-    await bot.send_message(
-        chat_id=client_chat_id,
-        text=f"Your message was edited: {message.text}",
-        business_connection_id=business_connection_id,  # Ensure this is sent on behalf of the business
-    )
-
-
-@business_router.deleted_business_messages()
-async def handle_deleted_business_messages(event: BusinessMessagesDeleted, bot: Bot):
-    """
-    Handles when messages are deleted from a connected business account.
-    """
-    logging.info(
-        f"Business messages deleted: ConnectionID={event.business_connection_id}, "
-        f"ChatID={event.chat.id}, MessageIDs={event.message_ids}"
-    )
-    # You might want to notify the business owner or log this for auditing.
-    connection_details = active_business_connections.get(event.business_connection_id)
-    if connection_details:
-        business_owner_chat_id = connection_details.get("user_chat_id")
-        if business_owner_chat_id:
-            await bot.send_message(
-                chat_id=business_owner_chat_id,
-                text=f"{len(event.message_ids)} message(s) were deleted in your managed chat {event.chat.id}.",
-            )
+            logging.error(f"Failed to notify business owner {owner_chat_id}: {e}")
 
 
 @business_router.callback_query()
 async def handle_tourism_menu_callback(callback: CallbackQuery):
     """
-    Handles callbacks from all inline keyboards, including the main menu and submenus.
+    Universal callback handler driven by the menu configuration.
     """
-    data = callback.data
+    await callback.answer()  # Acknowledge the query immediately to prevent timeouts
 
-    # --- Navigation Handlers ---
-    if data == "main_menu" or data == "back":
-        try:
-            await callback.message.edit_text(
-                "Вы вернулись в главное меню.",
-                reply_markup=get_tourism_main_inline_keyboard(),
-            )
-        except TelegramAPIError as e:
-            if "message is not modified" not in str(e):
-                logging.error(f"Failed to edit main menu: {e}", exc_info=True)
-        await callback.answer()
+    business_connection_id = callback.message.business_connection_id
+    if not business_connection_id:
+        logging.error("Callback received without a business_connection_id.")
         return
 
-    if data == "boats":
-        await callback.message.edit_text(
-            "Выберите тип лодки:", reply_markup=get_boats_submenu_keyboard()
-        )
-        await callback.answer()
+    menu_structure = get_menu_for_client(business_connection_id)
+    node_key = callback.data
+    node = menu_structure.get(node_key)
+
+    if not node:
+        logging.warning(f"Unknown node key '{node_key}' for client '{business_connection_id}'.")
         return
 
-    if data == "boats_back":
-        try:
-            await callback.message.edit_text(
-                "Выберите тип лодки:", reply_markup=get_boats_submenu_keyboard()
-            )
-        except TelegramAPIError as e:
-            if "message is not modified" not in str(e):
-                logging.error(f"Failed to edit boats submenu: {e}", exc_info=True)
-        await callback.answer()
-        return
-
-    if data == "help":
-        await callback.message.edit_text(
-            "Зову оператора! Для возврата к меню используйте команду /menu"
-        )
-        await callback.answer()
-        return
-
-    # --- Universal Content Handler for all other buttons ---
-
-    # Define response configurations including navigation targets for the "Back" button
-    responses_config = {
-        # Main Menu Items -> back to main_menu
-        "faq": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
-        "prices": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
-        "contacts": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
-        "excursions": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
-        "fishing": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
-        "surfing": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
-        "whales": {"default_text": "...", "file_id": 'https://t.me/mauritiusTransfer/3427', "back_to": "main_menu"},
-        "reviews": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
-        "about": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
-        "support": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
-        
-        # Boats Submenu Items -> back to boats_back (the boat selection menu)
-        "boat1": {"default_text": "boat1...", "file_id": None, "back_to": "boats_back"},
-        "boat2": {"default_text": "boat2...", "file_id": None, "back_to": "boats_back"},
-        "boat3": {"default_text": "boat3...", "file_id": None, "back_to": "boats_back"},
-        "boat4": {"default_text": "boat4...", "file_id": None, "back_to": "boats_back"},
-    }
-
-    config = responses_config.get(data)
-    if not config:
-        await callback.answer("Неизвестная команда.")
-        return
-
-    default_text = config.get("default_text", "")
-    fileid_or_url = config.get("file_id")
-    back_callback = config.get("back_to", "main_menu") # Default to main_menu
-    text = default_text
-
-    # Try to load response from file, overriding default_text
+    node_type = node.get("type")
+    
     try:
-        with open(os.path.join(RESPONSES_DIR, f"{data}.html"), encoding="utf-8") as f:
-            text = f.read()
-    except OSError:
-        logging.warning(f"Response file for '{data}.html' not found. Using default text.")
+        if node_type == "menu":
+            text = node.get("text", "Меню")  # Default text
 
-    # Process the response based on whether a file_id exists and what it is
-    try:
-        if fileid_or_url:
-            # Case 1: The 'file_id' is a URL. Append it to the text and enable preview.
-            if fileid_or_url.startswith('http'):
-                full_text = f"{text}\n\n{fileid_or_url}"  # Append URL directly to the text
+            # If a text_path is provided for a menu, try to load it.
+            if "text_path" in node:
+                client_response_path = os.path.join(RESPONSES_DIR, business_connection_id, node["text_path"])
+                try:
+                    with open(client_response_path, encoding="utf-8") as f:
+                        text = f.read()
+                except FileNotFoundError:
+                    logging.warning(f"Menu text file not found: {client_response_path}. Using default text.")
+                except OSError as e:
+                    logging.error(f"Could not read menu text file {client_response_path}: {e}")
+
+            keyboard = build_keyboard_from_config(node["buttons"])
+            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+
+        elif node_type == "content":
+            text = ""
+            # Construct the client-specific path for the response file
+            client_response_path = os.path.join(RESPONSES_DIR, business_connection_id, node["text_path"])
+            
+            try:
+                with open(client_response_path, encoding="utf-8") as f:
+                    text = f.read()
+            except FileNotFoundError:
+                logging.warning(f"Response file not found at client-specific path: {client_response_path}")
+                text = "<i>Контент временно недоступен.</i>"
+            except OSError as e:
+                logging.error(f"Could not read response file {client_response_path}: {e}")
+                text = "<i>Контент временно недоступен.</i>"
+
+            file_id = node.get("file_id")
+            back_to = node.get("back_to")
+            is_final = node.get("is_final", False)
+
+            keyboard = None
+            if not is_final and back_to:
+                if back_to == "main_menu":
+                    # If "back" is the main menu, just show one button to go there.
+                    nav_buttons = [{"text": "🏠 Главное меню", "target": "main_menu"}]
+                else:
+                    # For deeper menus, show both "Back" and "Home".
+                    nav_buttons = [
+                        {"text": "⬅️ Назад", "target": back_to},
+                        {"text": "🏠 Главное меню", "target": "main_menu"}
+                    ]
+                keyboard = build_keyboard_from_config([nav_buttons])
+
+            if file_id and file_id.startswith('http'):
+                full_text = f"{text}\n\n{file_id}"
                 await callback.message.edit_text(
                     full_text,
-                    reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
+                    reply_markup=keyboard,
                     parse_mode="HTML",
-                    disable_web_page_preview=False  # Ensure link preview is enabled
+                    disable_web_page_preview=False
                 )
-            # Case 2: The 'file_id' is a real photo ID.
-            else:
+            elif file_id: # It's a photo ID
                 if len(text) > 1024:
-                    logging.warning("Caption is too long. Sending photo and text separately.")
-                    await callback.message.answer_photo(photo=fileid_or_url)
-                    await callback.message.answer(
-                        text,
-                        reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
-                        parse_mode="HTML"
-                    )
+                    await callback.message.answer_photo(photo=file_id)
+                    await callback.message.answer(text, reply_markup=keyboard, parse_mode="HTML")
                 else:
-                    await callback.message.answer_photo(
-                        photo=fileid_or_url,
-                        caption=text,
-                        reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
-                        parse_mode="HTML"
-                    )
-                await callback.message.edit_reply_markup(reply_markup=None)
-        else:
-            # Case 3: No file_id, just edit the text.
-            await callback.message.edit_text(
-                text,
-                reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
-                parse_mode="HTML"
-            )
+                    await callback.message.answer_photo(photo=file_id, caption=text, reply_markup=keyboard, parse_mode="HTML")
+                await callback.message.edit_reply_markup(reply_markup=None) # Clean up old message
+            else: # Just text
+                await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+
     except TelegramAPIError as e:
-        if "message is not modified" in str(e):
-            # This is not an error, just a user pressing the same button twice.
-            # Silently ignore it.
-            pass
-        else:
-            logging.error(f"Error processing callback for '{data}': {e}. Sending fallback text.", exc_info=True)
-            try:
-                await callback.message.edit_text(
-                    "Произошла ошибка при обработке вашего запроса. Попробуйте позже.",
-                    reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback)
-                )
-            except TelegramAPIError:
-                pass  # If even the fallback fails, do nothing.
-
-    await callback.answer()
+        if "message is not modified" not in str(e):
+            logging.error(f"API Error on callback '{node_key}': {e}", exc_info=True)
 
 
-def register_business_handlers(
-    dp: Dispatcher,
-):  # This is for the new Business API events
+def register_business_handlers(dp: Dispatcher):
     dp.include_router(business_router)
