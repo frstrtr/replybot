@@ -402,10 +402,10 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
         "support": {"default_text": "...", "file_id": None, "back_to": "main_menu"},
         
         # Boats Submenu Items -> back to boats_back (the boat selection menu)
-        "boat1": {"default_text": "...", "file_id": None, "back_to": "boats_back"},
-        "boat2": {"default_text": "...", "file_id": None, "back_to": "boats_back"},
-        "boat3": {"default_text": "...", "file_id": None, "back_to": "boats_back"},
-        "boat4": {"default_text": "...", "file_id": None, "back_to": "boats_back"},
+        "boat1": {"default_text": "boat1...", "file_id": None, "back_to": "boats_back"},
+        "boat2": {"default_text": "boat2...", "file_id": None, "back_to": "boats_back"},
+        "boat3": {"default_text": "boat3...", "file_id": None, "back_to": "boats_back"},
+        "boat4": {"default_text": "boat4...", "file_id": None, "back_to": "boats_back"},
     }
 
     config = responses_config.get(data)
@@ -414,7 +414,7 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
         return
 
     default_text = config.get("default_text", "")
-    file_id = config.get("file_id")
+    fileid_or_url = config.get("file_id")
     back_callback = config.get("back_to", "main_menu") # Default to main_menu
     text = default_text
 
@@ -427,10 +427,10 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
 
     # Process the response based on whether a file_id exists and what it is
     try:
-        if file_id:
+        if fileid_or_url:
             # Case 1: The 'file_id' is a URL. Append it to the text and enable preview.
-            if file_id.startswith('http'):
-                full_text = f"{text}\n\n{file_id}"  # Append URL directly to the text
+            if fileid_or_url.startswith('http'):
+                full_text = f"{text}\n\n{fileid_or_url}"  # Append URL directly to the text
                 await callback.message.edit_text(
                     full_text,
                     reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
@@ -441,7 +441,7 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
             else:
                 if len(text) > 1024:
                     logging.warning("Caption is too long. Sending photo and text separately.")
-                    await callback.message.answer_photo(photo=file_id)
+                    await callback.message.answer_photo(photo=fileid_or_url)
                     await callback.message.answer(
                         text,
                         reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
@@ -449,7 +449,7 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
                     )
                 else:
                     await callback.message.answer_photo(
-                        photo=file_id,
+                        photo=fileid_or_url,
                         caption=text,
                         reply_markup=get_back_to_main_menu_keyboard(back_callback_data=back_callback),
                         parse_mode="HTML"

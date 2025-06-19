@@ -54,7 +54,7 @@ def get_boats_submenu_keyboard():
         [InlineKeyboardButton(text="🚤 boat1", callback_data="boat1"), InlineKeyboardButton(text="🛥️ boat2", callback_data="boat2")],
         [InlineKeyboardButton(text="⛵ boat3", callback_data="boat3"), InlineKeyboardButton(text="🛶 boat4", callback_data="boat4")],
     ]
-    back_menu_row = get_back_to_main_menu_keyboard(back_callback_data="boats_back").inline_keyboard[0]
+    back_menu_row = get_back_to_main_menu_keyboard(back_callback_data="main_menu").inline_keyboard[0]
     return InlineKeyboardMarkup(
         inline_keyboard=boats_rows + [back_menu_row]
     )
