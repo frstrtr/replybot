@@ -77,8 +77,12 @@ async def handle_business_message(message: Message, bot: Bot, state: FSMContext)
     # --- Send menu only if explicitly requested or it's the first interaction ---
     current_state = await state.get_state()
     
-    # Condition to send menu: explicit command OR the very first message (state is None)
-    if (message.text and message.text.strip().startswith('/menu')) or current_state is None:
+    # Condition to send menu: /menu command, first message (state is None), or user is already in the menu.
+    if (
+        (message.text and message.text.strip().startswith('/menu'))
+        or current_state is None
+        or current_state == UserConversationState.in_menu
+    ):
         if client_user.full_name != app_config.AUTHORIZED_FULL_NAME:
             menu_structure = get_menu_for_client(business_connection_id)
             main_menu_node = menu_structure.get("main_menu")
