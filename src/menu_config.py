@@ -24,8 +24,8 @@ DEFAULT_MENU_STRUCTURE = {
         "type": "menu",
         "text": "Выберите тип лодки:",
         "buttons": [
-            [{"text": "Катер 'Бриз'", "target": "boat1"}, {"text": "Яхта 'Победа'", "target": "boat2"}],
-            [{"text": "Лодка 'Удача'", "target": "boat3"}, {"text": "Катамаран 'Лагуна'", "target": "boat4"}],
+            [{"text": "Sea Strike 52 Ft", "target": "boat1"}, {"text": "TORa 54 Ft", "target": "boat2"}],
+            [{"text": "Mercury 17 Ft", "target": "boat3"}, {"text": "Catamaran 40 Ft", "target": "boat4"}],
             [{"text": "⬅️ Назад", "target": "main_menu"}]
         ]
     },
