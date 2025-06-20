@@ -10,6 +10,8 @@ from aiogram.types import (
     CallbackQuery,
 )
 import aiofiles # Import aiofiles
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
 from aiogram.exceptions import TelegramAPIError
 import html
 import os
@@ -18,6 +20,13 @@ import os
 import config as app_config
 from menu_config import get_menu_for_client
 from keyboards.inline_keyboards import build_keyboard_from_config
+
+
+# Define conversation states
+class UserConversationState(StatesGroup):
+    in_menu = State()
+    in_support = State()
+
 
 business_router = Router()
 
@@ -56,7 +65,7 @@ async def handle_business_connection(business_connection: BusinessConnection, bo
 
 
 @business_router.business_message()
-async def handle_business_message(message: Message, bot: Bot):
+async def handle_business_message(message: Message, bot: Bot, state: FSMContext):
     """Handles incoming messages via a Business Connection."""
     business_connection_id = message.business_connection_id
     client_user: User | None = message.from_user
@@ -65,21 +74,29 @@ async def handle_business_message(message: Message, bot: Bot):
     if not business_connection_id or not client_user:
         return
 
-    # --- Send the initial menu based on the configuration ---
-    if client_user.full_name != app_config.AUTHORIZED_FULL_NAME:
-        menu_structure = get_menu_for_client(business_connection_id)
-        main_menu_node = menu_structure.get("main_menu")
-        
-        if main_menu_node:
-            keyboard = build_keyboard_from_config(main_menu_node["buttons"])
-            await bot.send_message(
-                chat_id=client_chat_id,
-                text=main_menu_node["text"],
-                business_connection_id=business_connection_id,
-                reply_markup=keyboard,
-            )
+    # --- Send menu only if explicitly requested or it's the first interaction ---
+    current_state = await state.get_state()
     
-    # --- Notify business owner (logic remains the same) ---
+    # Condition to send menu: explicit command OR the very first message (state is None)
+    if (message.text and message.text.strip().startswith('/menu')) or current_state is None:
+        if client_user.full_name != app_config.AUTHORIZED_FULL_NAME:
+            menu_structure = get_menu_for_client(business_connection_id)
+            main_menu_node = menu_structure.get("main_menu")
+            
+            if main_menu_node:
+                keyboard = build_keyboard_from_config(main_menu_node["buttons"])
+                await bot.send_message(
+                    chat_id=client_chat_id,
+                    text=main_menu_node["text"],
+                    business_connection_id=business_connection_id,
+                    reply_markup=keyboard,
+                )
+            await state.set_state(UserConversationState.in_menu)
+            # If it was a /menu command, we don't need to notify the owner.
+            if message.text and message.text.strip().startswith('/menu'):
+                return
+    
+    # --- Notify business owner (runs for all messages that are not an explicit /menu command) ---
     connection_details = active_business_connections.get(business_connection_id)
     if connection_details and connection_details.get("user_chat_id"):
         owner_chat_id = connection_details["user_chat_id"]
@@ -100,7 +117,7 @@ async def handle_business_message(message: Message, bot: Bot):
 
 
 @business_router.callback_query()
-async def handle_tourism_menu_callback(callback: CallbackQuery):
+async def handle_tourism_menu_callback(callback: CallbackQuery, state: FSMContext):
     """
     Universal callback handler driven by the menu configuration.
     """
@@ -138,6 +155,7 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
 
             keyboard = build_keyboard_from_config(node["buttons"])
             await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+            await state.set_state(UserConversationState.in_menu)
 
         elif node_type == "content":
             text = ""
@@ -157,6 +175,12 @@ async def handle_tourism_menu_callback(callback: CallbackQuery):
             file_id = node.get("file_id")
             back_to = node.get("back_to")
             is_final = node.get("is_final", False)
+
+            # Set the state before sending the message
+            if is_final:
+                await state.set_state(UserConversationState.in_support)
+            else:
+                await state.set_state(UserConversationState.in_menu)
 
             keyboard = None
             if not is_final and back_to:
