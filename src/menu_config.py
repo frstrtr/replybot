@@ -26,6 +26,8 @@ DEFAULT_MENU_STRUCTURE = {
         "buttons": [
             [{"text": "Sea Strike 52 Ft", "target": "boat1"}, {"text": "TORa 54 Ft", "target": "boat2"}],
             [{"text": "Mercury 17 Ft", "target": "boat3"}, {"text": "Catamaran 40 Ft", "target": "boat4"}],
+            [{"text": "Yamaha", "target": "boat5"}, {"text": "LIMITLESS fishing", "target": "boat6"}],
+            [{"text": "Benetau GT 40", "target": "boat7"}, {"text": "Benetau GT 38", "target": "boat8"}],
             [{"text": "⬅️ Назад", "target": "main_menu"}]
         ]
     },
@@ -46,6 +48,10 @@ DEFAULT_MENU_STRUCTURE = {
     "boat2":      {"type": "content", "text_path": "boat2.html", "back_to": "boats_menu"},
     "boat3":      {"type": "content", "text_path": "boat3.html", "back_to": "boats_menu"},
     "boat4":      {"type": "content", "text_path": "boat4.html", "back_to": "boats_menu"},
+    "boat5":      {"type": "content", "text_path": "boat5.html", "back_to": "boats_menu"},
+    "boat6":      {"type": "content", "text_path": "boat6.html", "back_to": "boats_menu"},
+    "boat7":      {"type": "content", "text_path": "boat7.html", "back_to": "boats_menu"},
+    "boat8":      {"type": "content", "text_path": "boat8.html", "back_to": "boats_menu"},
 }
 
 # --- Client-Specific Menu Assignments ---
