@@ -30,7 +30,7 @@ DEFAULT_MENU_STRUCTURE = {
             [{"text": "Yamaha 1 Red", "target": "boat5"}, {"text": "Yamaha 2 Blue", "target": "boat9"}],
             [{"text": "Mercury 17 Ft", "target": "boat3"}, {"text": "Catamaran 40 Ft", "target": "boat4"}],
             [{"text": "LIMITLESS fishing", "target": "boat6"}, {"text": "Scarab 255 LX Wake", "target": "boat10"}],
-            [{"text": "OMAR IV fishing", "target": "boat13"}],
+            [{"text": "Fishing Expeditions", "target": "boat13"}],
             [{"text": "⬅️ Назад", "target": "main_menu"}]
         ]
     },
