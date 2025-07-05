@@ -29,7 +29,7 @@ DEFAULT_MENU_STRUCTURE = {
             [{"text": "Yamaha 1 Red", "target": "boat5"}, {"text": "LIMITLESS fishing", "target": "boat6"}],
             [{"text": "Benetau GT 40", "target": "boat7"}, {"text": "Benetau GT 38", "target": "boat8"}],
             [{"text": "Yamaha 2 Blue", "target": "boat9"}, {"text": "Scarab 255 LX Wake", "target": "boat10"}],
-            [{"text": "Saxdor 270", "target": "boat11"},],
+            [{"text": "ПРОДАЖА Saxdor 270", "target": "boat11"}, {"text": "Saxdor 320", "target": "boat12"}],
             [{"text": "⬅️ Назад", "target": "main_menu"}]
         ]
     },
@@ -57,6 +57,7 @@ DEFAULT_MENU_STRUCTURE = {
     "boat9":      {"type": "content", "text_path": "boat9.html", "back_to": "boats_menu"},
     "boat10":      {"type": "content", "text_path": "boat10.html", "back_to": "boats_menu"},
     "boat11":      {"type": "content", "text_path": "boat11.html", "back_to": "boats_menu"},
+    "boat12":      {"type": "content", "text_path": "boat12.html", "back_to": "boats_menu"},
 }
 
 # --- Client-Specific Menu Assignments ---
