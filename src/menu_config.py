@@ -28,7 +28,7 @@ DEFAULT_MENU_STRUCTURE = {
             [{"text": "Mercury 17 Ft", "target": "boat3"}, {"text": "Catamaran 40 Ft", "target": "boat4"}],
             [{"text": "Yamaha 1 Red", "target": "boat5"}, {"text": "LIMITLESS fishing", "target": "boat6"}],
             [{"text": "Benetau GT 40", "target": "boat7"}, {"text": "Benetau GT 38", "target": "boat8"}],
-            [{"text": "Yamaha 2 Blue", "target": "boat9"}, {"text": "Scarab 255 LX Wake", "target": "boat9"}],
+            [{"text": "Yamaha 2 Blue", "target": "boat9"}, {"text": "Scarab 255 LX Wake", "target": "boat10"}],
             [{"text": "⬅️ Назад", "target": "main_menu"}]
         ]
     },
