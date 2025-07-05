@@ -30,6 +30,7 @@ DEFAULT_MENU_STRUCTURE = {
             [{"text": "Yamaha 1 Red", "target": "boat5"}, {"text": "Yamaha 2 Blue", "target": "boat9"}],
             [{"text": "Mercury 17 Ft", "target": "boat3"}, {"text": "Catamaran 40 Ft", "target": "boat4"}],
             [{"text": "LIMITLESS fishing", "target": "boat6"}, {"text": "Scarab 255 LX Wake", "target": "boat10"}],
+            [{"text": "OMAR IV fishing", "target": "boat13"}],
             [{"text": "⬅️ Назад", "target": "main_menu"}]
         ]
     },
@@ -58,6 +59,7 @@ DEFAULT_MENU_STRUCTURE = {
     "boat10":      {"type": "content", "text_path": "boat10.html", "back_to": "boats_menu"},
     "boat11":      {"type": "content", "text_path": "boat11.html", "back_to": "boats_menu"},
     "boat12":      {"type": "content", "text_path": "boat12.html", "back_to": "boats_menu"},
+    "boat13":      {"type": "content", "text_path": "boat13.html", "back_to": "boats_menu"},
 }
 
 # --- Client-Specific Menu Assignments ---
