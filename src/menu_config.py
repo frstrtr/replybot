@@ -31,7 +31,7 @@ DEFAULT_MENU_STRUCTURE = {
             [{"text": "Mercury 17 Ft", "target": "boat3"}, {"text": "Catamaran 40 Ft", "target": "boat4"}],
             [{"text": "LIMITLESS fishing", "target": "boat6"}, {"text": "Scarab 255 LX Wake", "target": "boat10"}],
             [{"text": "Fishing Expeditions", "target": "boat13"}, {"text": "Sport Fisher 40 Ft", "target": "boat14"}],
-            [{"text": "Speed Fisher 36 Ft", "target": "boat15"}],
+            [{"text": "Speed Fisher 36 Ft", "target": "boat15"},{"text": "Small Fisher 22 Ft", "target": "boat16"}],
             [{"text": "⬅️ Назад", "target": "main_menu"}]
         ]
     },
@@ -63,6 +63,7 @@ DEFAULT_MENU_STRUCTURE = {
     "boat13":      {"type": "content", "text_path": "boat13.html", "back_to": "boats_menu"},
     "boat14":      {"type": "content", "text_path": "boat14.html", "back_to": "boats_menu"},
     "boat15":      {"type": "content", "text_path": "boat15.html", "back_to": "boats_menu"},
+    "boat16":      {"type": "content", "text_path": "boat16.html", "back_to": "boats_menu"},
 }
 
 # --- Client-Specific Menu Assignments ---
